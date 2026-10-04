@@ -5,12 +5,76 @@ import { state, positions } from "./state.js";
 import { app, docName, docSub, editor, readingScroll, MD_RE } from "./dom.js";
 import { ensureMd } from "./util.js";
 import { idbSet } from "./idb.js";
-import { renderMarkdown } from "./markdown.js";
+import { renderMarkdown, patchMarkdown } from "./markdown.js";
 import { renderTree, refreshTreeState, updateCurrentFolder } from "./tree.js";
 import { savePos, updateProgress } from "./scroll.js";
 import { setMode } from "./view.js";
 import { toast } from "./ui.js";
 import { renderVaultBox } from "./vault.js";
+import { inRoom } from "./collab.js";
+
+/* A document's text is read once and cached on the file object, so an edit made
+   in another app stays invisible until we look again. Only handle-backed files
+   can be looked at again: a picked/dropped File is a snapshot that Chrome refuses
+   to read once the file underneath changes. `lastModified` is the disk mtime of
+   the version we hold; save.js refreshes it after writing so our own saves don't
+   come back as "changed on disk". */
+export async function readHandle(file) {
+  const blob = await file.handle.getFile();
+  file.lastModified = blob.lastModified;
+  return blob.text();
+}
+
+// Take the on-disk version if it's newer. Returns true when file.content changed.
+// Unsaved edits are only discarded if the user agrees; either way we ask once
+// per change on disk, not on every focus.
+async function pullFromDisk(file) {
+  if (!file.handle || file.lastModified == null) return false;
+  let blob;
+  try {
+    blob = await file.handle.getFile();
+  } catch {
+    return false; // moved/deleted, or permission lapsed — keep what we have
+  }
+  if (blob.lastModified === file.lastModified) return false;
+  file.lastModified = blob.lastModified;
+  const text = await blob.text();
+  if (text === file.content) return false;
+  if (file.dirty && !confirm(`"${file.name}" changed on disk. Reload it and discard your unsaved edits?`)) return false;
+  file.content = text;
+  file.dirty = false;
+  return true;
+}
+
+// Re-check the open document, e.g. when the tab regains focus. Returning to the
+// tab fires both focus and visibilitychange; `syncing` keeps that to one check
+// (and one confirm).
+let syncing = false;
+export async function syncCurrentFromDisk() {
+  const f = state.current;
+  if (!f?.handle || inRoom() || syncing) return; // in a room the shared text is the truth
+  syncing = true;
+  try {
+    if (!(await pullFromDisk(f)) || f !== state.current) return;
+  } finally {
+    syncing = false;
+  }
+  const { selectionStart: s, selectionEnd: e, scrollTop } = editor;
+  editor.value = f.content;
+  editor.setSelectionRange(Math.min(s, f.content.length), Math.min(e, f.content.length));
+  editor.scrollTop = scrollTop;
+  patchMarkdown(f.content); // repaints only changed blocks, keeps the reading position
+  updateSub();
+  refreshTreeState();
+  toast("Reloaded — file changed on disk");
+}
+
+export function wireDiskSync() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") syncCurrentFromDisk();
+  });
+  window.addEventListener("focus", syncCurrentFromDisk);
+}
 
 export async function openDoc(file) {
   if (!file) return;
@@ -19,7 +83,7 @@ export async function openDoc(file) {
 
   if (file.content == null) {
     try {
-      if (file.handle) file.content = await (await file.handle.getFile()).text();
+      if (file.handle) file.content = await readHandle(file);
       else if (file.file) file.content = await file.file.text();
       else file.content = "";
     } catch (e) {
@@ -27,6 +91,8 @@ export async function openDoc(file) {
       toast(`Could not read file (${e.name || "error"})`);
       return;
     }
+  } else if (!inRoom()) {
+    await pullFromDisk(file); // cached from an earlier visit — may be stale
   }
 
   state.current = file;

@@ -9,6 +9,14 @@ import { renderTree, refreshTreeState } from "./tree.js";
 import { updateSub } from "./document.js";
 import { toast } from "./ui.js";
 
+// Record the mtime of what we just wrote, so the focus check in document.js
+// doesn't mistake our own save for an outside change.
+async function noteWritten(f) {
+  try {
+    f.lastModified = (await f.handle.getFile()).lastModified;
+  } catch {}
+}
+
 async function ensureWrite(handle) {
   const opts = { mode: "readwrite" };
   if ((await handle.queryPermission(opts)) === "granted") return true;
@@ -32,6 +40,7 @@ export async function saveDoc() {
       await w.write(f.content);
       await w.close();
       f.handle = handle;
+      await noteWritten(f);
       f.draft = false;
       f.name = handle.name;
       f.dirty = false;
@@ -54,6 +63,7 @@ export async function saveDoc() {
         const w = await f.handle.createWritable();
         await w.write(f.content);
         await w.close();
+        await noteWritten(f);
         f.dirty = false;
         updateSub();
         refreshTreeState();

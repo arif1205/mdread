@@ -14,7 +14,7 @@ import { idbDel } from "./modules/idb.js";
 import { newDoc, wireDiskSync } from "./modules/document.js";
 import { openFolder, openFiles, handleDrop, setRoot, wireFallbackInputs } from "./modules/files.js";
 import { openSample } from "./modules/sample.js";
-import { setSidebar, toggleFocus, setMode, applyPrefs } from "./modules/view.js";
+import { setSidebar, toggleFocus, setMode, applyPrefs, wirePrint } from "./modules/view.js";
 import { closeLibrary, renderTree } from "./modules/tree.js";
 import { saveDoc, downloadDoc } from "./modules/save.js";
 import { toggleTypePop, hint, wireUi } from "./modules/ui.js";
@@ -134,6 +134,7 @@ function wire() {
   wireVault();
   wireFallbackInputs();
   wireDiskSync();
+  wirePrint();
 
   // warn on unsaved
   window.addEventListener("beforeunload", (e) => {

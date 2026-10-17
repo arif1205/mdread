@@ -3,7 +3,7 @@
    the stylesheet reacts to — JS never toggles layout classes directly. */
 
 import { state, prefs } from "./state.js";
-import { $, $$, app } from "./dom.js";
+import { $, $$, app, docName } from "./dom.js";
 import { getText, replaceText, focusEditor } from "./editor.js";
 import { renderMarkdown } from "./markdown.js";
 
@@ -53,4 +53,21 @@ export function toggleFocus() {
   const on = app.dataset.focus !== "on";
   app.dataset.focus = on ? "on" : "off";
   $("#focusBtn").classList.toggle("is-on", on);
+}
+
+/* Print / Save as PDF (styles in _print.scss). Edit mode has no rendered preview
+   on screen, so render the latest text first; and title the page after the
+   document, since browsers use the title as the PDF's default filename. */
+export function wirePrint() {
+  let title = "";
+  addEventListener("beforeprint", () => {
+    if (!state.current) return;
+    if (app.dataset.mode === "edit") renderMarkdown(getText());
+    title = document.title;
+    document.title = docName.textContent;
+  });
+  addEventListener("afterprint", () => {
+    if (title) document.title = title;
+    title = "";
+  });
 }

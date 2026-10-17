@@ -147,7 +147,7 @@ one tiny helper) pulls Yjs into the startup bundle — check `dist/index.html` h
 ### Styles (SCSS)
 
 `src/styles/main.scss` `@use`s the partials in cascade order (`_tokens`, `_base`, `_sidebar`,
-`_column`, `_reading`, `_toc`, `_welcome`, `_components`, `_share`, `_responsive`). Order
+`_column`, `_reading`, `_toc`, `_welcome`, `_components`, `_share`, `_responsive`, `_print`). Order
 matters — later partials win the cascade. `_share.scss` holds the dialog, the shared-document
 banner, and the `[data-shared]` rules that hide save/mode/library controls when you're reading
 someone else's document.

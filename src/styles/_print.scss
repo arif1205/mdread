@@ -1,0 +1,56 @@
+/* ---------- Print / Save as PDF ----------
+   Everything but the rendered document is hidden by exclusion (each level keeps
+   only the branch that leads to #reading), so chrome added later is left out of
+   print without anyone remembering to list it here. The fixed-height panes are
+   unwound so the document flows across pages, and the palette is forced to
+   ink-on-white whatever theme is on screen. view.js renders the latest text
+   and titles the page (the PDF's default filename) on beforeprint. */
+@media print {
+  @page { margin: 18mm 16mm; }
+
+  html[data-theme] {
+    --paper: #fff; --paper-2: #f6f4f0; --surface: #f6f4f0;
+    --ink: #1a1714; --ink-soft: #4a443b; --ink-faint: #7a7264;
+    --line: #ddd5c6; --line-2: #cfc5b2; --accent: #9a4428; --accent-soft: #e2c4b6;
+    --c-bg: #f5f1ea; --c-kw: #9a3b2e; --c-str: #4f6233; --c-num: #8a5b1e;
+    --c-com: #8f8571; --c-fn: #6d4f22; --c-var: #34466a; --c-punc: #6d6452;
+    --shadow: none;
+    color-scheme: light;
+  }
+  html, body { height: auto; overflow: visible; background: #fff; }
+  body::before { display: none; }
+
+  body > :not(.app),
+  .app > :not(.main),
+  .main > :not(.panes),
+  .panes > :not(.reading-scroll) { display: none !important; }
+
+  .app, .main, .panes, .reading-scroll {
+    display: block !important; height: auto !important; overflow: visible !important;
+    border: none !important; padding: 0 !important; container-type: normal;
+  }
+
+  .reading {
+    max-width: none; margin: 0; padding: 0;
+    font-size: 11pt; line-height: 1.6;
+    animation: none;
+  }
+  .reading > * { animation: none !important; }
+  .reading .anchor { display: none; }
+
+  /* keep things whole across page breaks */
+  .reading :is(h1, h2, h3, h4) { break-after: avoid; }
+  .reading :is(pre, blockquote, img, tr, .callout) { break-inside: avoid; }
+  .reading p, .reading li { orphans: 3; widows: 3; }
+
+  /* nothing can scroll on paper: wrap code, fit tables to the page */
+  .reading pre { white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: none; }
+  .reading .table-wrap { width: auto; min-width: 0; max-width: none; left: auto; translate: none; overflow: visible; }
+  .reading table { font-size: .85em; }
+  .reading td { min-width: 0; }
+  .reading .table-wrap :is(th, td):first-child { position: static; animation: none; }
+  .reading img { box-shadow: none; }
+
+  // tinted blocks keep their tint instead of printing as bare text
+  .reading :is(pre, code, .callout) { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

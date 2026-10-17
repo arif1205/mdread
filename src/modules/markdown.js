@@ -13,7 +13,20 @@ import { slug } from "./util.js";
 
 marked.setOptions({ gfm: true, breaks: false });
 
-const toHtml = (md) => DOMPurify.sanitize(marked.parse(md), { ADD_ATTR: ["target"] });
+/* Tables get a scrolling wrapper so a wide one scrolls sideways instead of
+   spilling out of the column. It is added here, at parse time, rather than after
+   mounting, so patchMarkdown() compares wrapped blocks with wrapped blocks. */
+function toHtml(md) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = DOMPurify.sanitize(marked.parse(md), { ADD_ATTR: ["target"] });
+  for (const table of tpl.content.querySelectorAll("table:not(table table)")) {
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    table.replaceWith(wrap);
+    wrap.appendChild(table);
+  }
+  return tpl.innerHTML;
+}
 
 const isHeading = (el) => /^H[1-4]$/.test(el.tagName);
 const holdsHeading = (el) => isHeading(el) || !!el.querySelector?.("h1, h2, h3, h4");

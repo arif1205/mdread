@@ -41,7 +41,7 @@
 .panes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; }
 .app[data-mode="split"] .panes { grid-template-columns: 1fr 1fr; }
 
-.reading-scroll { overflow-y: auto; scroll-behavior: smooth; height: 100%; }
+.reading-scroll { overflow-y: auto; scroll-behavior: smooth; height: 100%; container-type: inline-size; }
 .app[data-mode="edit"] .reading-scroll { display: none; }
 .app[data-mode="split"] .reading-scroll { border-left: 1px solid var(--line); order: 2; }
 

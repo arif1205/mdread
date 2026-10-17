@@ -106,10 +106,31 @@ html[data-dropcap="on"] .reading > p:first-of-type::first-letter {
 .reading pre code { font-family: var(--mono); color: var(--ink); background: none; padding: 0; border: none; }
 
 /* tables */
-.reading table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: .92em; }
-.reading th, .reading td { padding: .55em .75em; border-bottom: 1px solid var(--line); text-align: left; }
-.reading thead th { font-family: var(--ui); font-size: .82em; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 2px solid var(--line-2); }
-.reading tbody tr:hover { background: var(--paper-2); }
+/* A wide table may grow past the measure, up to the width of the reading pane
+   (cqi of .reading-scroll), staying centred on the column; anything wider still
+   scrolls sideways inside .table-wrap. `translate`, not `transform`, because the
+   `rise` entrance animation owns `transform` on top-level blocks. */
+.reading .table-wrap {
+  width: fit-content; min-width: 100%; max-width: calc(100cqi - 3rem);
+  position: relative; left: 50%; translate: -50% 0;
+  margin: 1.5em 0; overflow-x: auto; overscroll-behavior-x: contain;
+}
+.reading table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: .92em; line-height: 1.55; }
+.reading .table-wrap > table { margin: 0; }
+.reading th, .reading td { padding: .55em .75em; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.reading td { min-width: 7em; }
+.reading thead th { font-family: var(--ui); font-size: .82em; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 2px solid var(--line-2); vertical-align: bottom; }
+/* The first column labels the row, so it stays put while the rest scrolls. */
+.reading .table-wrap :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); }
+/* Its divider fades in only once the table is scrolled sideways — a table that
+   fits has no timeline, so the animation never applies. */
+@supports (animation-timeline: scroll()) {
+  .reading .table-wrap :is(th, td):first-child {
+    animation: pin-edge linear both; animation-timeline: scroll(nearest inline); animation-range: 0 1.5rem;
+  }
+}
+@keyframes pin-edge { from { box-shadow: inset -1px 0 transparent; } to { box-shadow: inset -1px 0 var(--line-2); } }
+.reading tbody tr:hover, .reading tbody tr:hover > :first-child { background: var(--paper-2); }
 
 /* footnotes / small */
 .reading sup a { text-decoration: none; }

@@ -70,6 +70,10 @@ export async function insertImages(files) {
   return true;
 }
 
+export async function selectRange(from, to) {
+  (await loadEditor()).select(from, to);
+}
+
 export async function focusEditor({ end = false } = {}) {
   (await loadEditor()).focus(end);
 }

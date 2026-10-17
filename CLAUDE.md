@@ -73,6 +73,7 @@ All behaviour lives in `src/modules/*.js` — plain ES modules, one concern each
 - `vault.js` — sign-in, master-password unlock, share-list sync, and vault documents
   (`data-vault` panes in the account dialog, `data-state` on the sidebar vault panel;
   account controls live in the vault dialog footer, not the sidebar)
+- `assets.js` — local images (resolve beside the doc, paste/drop into `assets/`) · `search.js` — search inside files (⇧⌘F)
 - `recents.js`, `sample.js`, `keyboard.js`
 
 The modules form import **cycles** (e.g. `tree` ↔ `document`, `files` ↔ `recents`). This is
@@ -147,7 +148,7 @@ one tiny helper) pulls Yjs into the startup bundle — check `dist/index.html` h
 ### Styles (SCSS)
 
 `src/styles/main.scss` `@use`s the partials in cascade order (`_tokens`, `_base`, `_sidebar`,
-`_column`, `_reading`, `_toc`, `_welcome`, `_components`, `_share`, `_responsive`, `_print`). Order
+`_column`, `_reading`, `_toc`, `_welcome`, `_components`, `_share`, `_search`, `_responsive`, `_print`). Order
 matters — later partials win the cascade. `_share.scss` holds the dialog, the shared-document
 banner, and the `[data-shared]` rules that hide save/mode/library controls when you're reading
 someone else's document.

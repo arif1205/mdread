@@ -1,0 +1,60 @@
+/* ---------- Search inside files (search.js) ----------
+   The dialog reuses the vault's search bar (.vgrid__bar / .vgrid__search). */
+/* [open] only: a bare display would override the UA rule that hides a closed dialog. */
+.fsearch[open] { display: flex; flex-direction: column; height: min(38rem, calc(100vh - 4rem)); }
+.fsearch .vgrid__bar { margin-top: .6rem; }
+
+.fsearch__list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  margin: 0 -.6rem; padding: 0 .6rem;
+  font-family: var(--sans);
+}
+.fsearch__file + .fsearch__file { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+
+.fsearch__head, .fsearch__hit {
+  display: flex; align-items: baseline; gap: .6rem; width: 100%;
+  padding: .38rem .55rem; border-radius: 7px; text-align: left;
+}
+.fsearch__head.is-on, .fsearch__hit.is-on { background: var(--paper-2); }
+.fsearch__head.is-on { box-shadow: inset 2px 0 var(--accent); }
+.fsearch__hit.is-on { box-shadow: inset 2px 0 var(--accent); }
+
+.fsearch__name { font-size: .86rem; font-weight: 600; color: var(--ink); }
+.fsearch__dir { font-family: var(--ui); font-size: .68rem; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fsearch__n { margin-left: auto; font-family: var(--ui); font-size: .66rem; color: var(--ink-faint); }
+
+.fsearch__ln {
+  flex: none; min-width: 2.2em; text-align: right;
+  font-family: var(--mono); font-size: .68rem; color: var(--ink-faint);
+}
+.fsearch__text {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .8rem; color: var(--ink-soft);
+}
+.fsearch__text mark { background: var(--sel); color: var(--ink); border-radius: 3px; padding: 0 .1em; }
+.fsearch__more { margin: .1rem 0 0 3.35rem; font-family: var(--ui); font-size: .66rem; color: var(--ink-faint); }
+
+.fsearch__keys {
+  margin: .8rem 0 0; font-family: var(--ui); font-size: .64rem; color: var(--ink-faint);
+}
+.fsearch__keys kbd {
+  display: inline-block; min-width: 1.4em; padding: .05em .35em; margin-right: .15em;
+  border: 1px solid var(--line-2); border-radius: 4px; text-align: center; font: inherit;
+}
+
+/* the sidebar's entry points */
+.search__full {
+  flex: none; display: grid; place-items: center; width: 1.5rem; height: 1.5rem; margin: -.2rem -.3rem -.2rem 0;
+  border-radius: 6px; color: var(--ink-faint); transition: .16s var(--ease);
+}
+.search__full:hover { color: var(--accent); background: var(--paper-2); }
+.tree-empty { margin: .6rem .55rem .3rem; font-family: var(--ui); font-size: .74rem; color: var(--ink-faint); }
+.tree-empty__search {
+  margin: 0 .55rem; padding: .3rem 0; text-align: left;
+  font-family: var(--ui); font-size: .74rem; color: var(--accent);
+}
+.tree-empty__search:hover { text-decoration: underline; }
+
+/* the hit, painted in the document by the CSS Custom Highlight API */
+::highlight(search) { background-color: var(--sel); color: var(--ink); }
+::highlight(search-current) { background-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--ink); }

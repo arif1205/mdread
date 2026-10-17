@@ -7,6 +7,7 @@ import { escapeHtml } from "./util.js";
 import { idbSet } from "./idb.js";
 import { openDoc } from "./document.js";
 import { setText } from "./editor.js";
+import { openSearch } from "./search.js";
 import { resetAssets } from "./assets.js";
 import { renderRecents } from "./recents.js";
 import { setMode, setSidebar } from "./view.js";
@@ -55,7 +56,10 @@ export function renderTree() {
   const files = q ? state.files.filter((f) => f.path.toLowerCase().includes(q)) : state.files;
 
   if (!files.length) {
-    if (state.files.length) tree.innerHTML = `<p class="tree-empty">No matches</p>`;
+    if (state.files.length) {
+      tree.innerHTML = `<p class="tree-empty">No file names match.</p><button class="tree-empty__search" type="button">Search inside files for “${escapeHtml(state.filter)}”</button>`;
+      tree.querySelector("button").addEventListener("click", () => openSearch(state.filter));
+    }
     return;
   }
 

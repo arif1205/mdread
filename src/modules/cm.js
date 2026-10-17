@@ -143,6 +143,12 @@ export function mountEditor(parent, text, { onEdit, onImages }) {
       view.dispatch(view.state.replaceSelection(before + str + after), { userEvent: "input.paste", scrollIntoView: true });
     },
 
+    // Select a range and bring it to the middle of the pane.
+    select(from, to) {
+      view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: "center" }) });
+      view.focus();
+    },
+
     focus(end) {
       view.focus();
       if (end) view.dispatch({ selection: { anchor: view.state.doc.length }, scrollIntoView: true });

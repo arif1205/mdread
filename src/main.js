@@ -21,6 +21,7 @@ import { toggleTypePop, hint, wireUi } from "./modules/ui.js";
 import { renderRecents, getRecents } from "./modules/recents.js";
 import { wireScroll } from "./modules/scroll.js";
 import { insertImages } from "./modules/editor.js";
+import { wireSearch, openSearch } from "./modules/search.js";
 import { wireShare, bootShare } from "./modules/share.js";
 import { wireVault, bootVault } from "./modules/vault.js";
 import { onKey } from "./modules/keyboard.js";
@@ -51,6 +52,8 @@ function wire() {
       renderTree();
     }, 120)
   );
+
+  $("#searchFullBtn").addEventListener("click", () => openSearch(searchInput.value.trim() || undefined));
 
   // mode segmented
   $$(".seg [data-mode-val]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.modeVal)));
@@ -139,6 +142,7 @@ function wire() {
   wireFallbackInputs();
   wireDiskSync();
   wirePrint();
+  wireSearch();
 
   // warn on unsaved
   window.addEventListener("beforeunload", (e) => {

@@ -6,11 +6,17 @@ import { saveDoc } from "./save.js";
 import { openFolder } from "./files.js";
 import { setMode, toggleSidebar, toggleFocus, setSidebar, applyPrefs } from "./view.js";
 import { openShareDialog } from "./share.js";
+import { openSearch } from "./search.js";
 
 export function onKey(e) {
   const meta = e.metaKey || e.ctrlKey;
   const inField = /input|textarea|select/i.test(e.target.tagName) || e.target.isContentEditable;
 
+  if (meta && e.shiftKey && e.key.toLowerCase() === "f") {
+    e.preventDefault();
+    openSearch(searchInput.value.trim() || undefined);
+    return;
+  }
   // ⇧⌘S must be tested before ⌘S — both match once the key is lowercased.
   if (meta && e.shiftKey && e.key.toLowerCase() === "s") {
     e.preventDefault();

@@ -20,6 +20,7 @@ import { saveDoc, downloadDoc } from "./modules/save.js";
 import { toggleTypePop, hint, wireUi } from "./modules/ui.js";
 import { renderRecents, getRecents } from "./modules/recents.js";
 import { wireScroll } from "./modules/scroll.js";
+import { insertImages } from "./modules/editor.js";
 import { wireShare, bootShare } from "./modules/share.js";
 import { wireVault, bootVault } from "./modules/vault.js";
 import { onKey } from "./modules/keyboard.js";
@@ -121,6 +122,9 @@ function wire() {
     e.preventDefault();
     dragDepth = 0;
     dz.classList.remove("is-active");
+    // Images dropped while editing go into the document, not the library.
+    const files = [...(e.dataTransfer?.files || [])];
+    if (files.length && files.every((f) => f.type.startsWith("image/")) && (await insertImages(files))) return;
     await handleDrop(e.dataTransfer);
   });
 

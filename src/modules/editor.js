@@ -12,6 +12,7 @@ import { debounce } from "./util.js";
 import { renderMarkdown } from "./markdown.js";
 import { deriveDraftTitle, updateSub } from "./document.js";
 import { refreshTreeState } from "./tree.js";
+import { saveImages } from "./assets.js";
 
 let cm = null; // the mounted editor, once loaded
 let pending = ""; // the buffer's text until then
@@ -37,7 +38,7 @@ function markDirty() {
 // Load and mount CodeMirror (once), seeded with whatever text is pending.
 export function loadEditor() {
   loading ??= import("./cm.js").then(({ mountEditor }) => {
-    cm = mountEditor(editor, pending, liveRender);
+    cm = mountEditor(editor, pending, { onEdit: liveRender, onImages: insertImages });
     return cm;
   });
   return loading;
@@ -57,6 +58,16 @@ export function setText(text = "") {
 export function replaceText(text) {
   if (cm) cm.replaceText(text);
   else pending = text;
+}
+
+/* Save pasted or dropped images beside the document and link them at the caret.
+   Returns false when the editor isn't showing, so a drop can fall through to
+   opening files instead. */
+export async function insertImages(files) {
+  if (!cm || app.dataset.mode === "read" || !state.current) return false;
+  const md = await saveImages(files);
+  if (md) cm.insertBlock(md);
+  return true;
 }
 
 export async function focusEditor({ end = false } = {}) {

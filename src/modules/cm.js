@@ -51,11 +51,12 @@ const linkSel = (view) =>
 /* ---------------- the view ---------------- */
 
 /* Mount an editor into `parent` and return the handful of operations editor.js
-   exposes. `onEdit` fires for edits a person made: every CodeMirror command tags
+   exposes. `onImages` receives pasted image files. `onEdit` fires for edits a
+   person made: every CodeMirror command tags
    its transaction with a userEvent ("input", "delete", "undo", …), while
    setText/replaceText dispatch untagged, as does y-codemirror for a peer's edit —
    collab.js renders and marks those itself. */
-export function mountEditor(parent, text, onEdit) {
+export function mountEditor(parent, text, { onEdit, onImages }) {
   /* Undo history lives in a compartment because co-editing replaces it: in a
      room, undo goes through Yjs's UndoManager so it only ever undoes your own
      edits, never a peer's. `collabExt` is remembered so setText(), which builds
@@ -87,6 +88,15 @@ export function mountEditor(parent, text, onEdit) {
     drawSelection(),
     placeholder("# Start writing…"),
     EditorView.contentAttributes.of({ spellcheck: "false", "aria-label": "Markdown source" }),
+    EditorView.domEventHandlers({
+      paste(e) {
+        const images = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
+        if (!images.length) return false;
+        e.preventDefault();
+        onImages(images);
+        return true;
+      },
+    }),
     EditorView.updateListener.of((u) => {
       if (u.transactions.some((tr) => tr.docChanged && tr.annotation(Transaction.userEvent) != null)) onEdit();
     }),
@@ -120,6 +130,17 @@ export function mountEditor(parent, text, onEdit) {
         en--;
       }
       view.dispatch({ changes: { from: s, to: ec, insert: doc.slice(s, en) } });
+    },
+
+    // Insert a block (an image, say) at the selection on lines of its own, as if
+    // typed — undoable, and counted as an edit.
+    insertBlock(str) {
+      const { from, to } = view.state.selection.main;
+      const line = view.state.doc.lineAt(from);
+      const endLine = view.state.doc.lineAt(to);
+      const before = from > line.from ? "\n\n" : "";
+      const after = to < endLine.to ? "\n\n" : "";
+      view.dispatch(view.state.replaceSelection(before + str + after), { userEvent: "input.paste", scrollIntoView: true });
     },
 
     focus(end) {

@@ -7,6 +7,7 @@ import { escapeHtml } from "./util.js";
 import { idbSet } from "./idb.js";
 import { openDoc } from "./document.js";
 import { setText } from "./editor.js";
+import { resetAssets } from "./assets.js";
 import { renderRecents } from "./recents.js";
 import { setMode, setSidebar } from "./view.js";
 import { savePos } from "./scroll.js";
@@ -32,6 +33,7 @@ export function closeLibrary() {
   state.current = null;
   state.rootHandle = null;
   state.rootName = "";
+  resetAssets();
   state.filter = "";
   searchInput.value = "";
   idbSet("lastDoc", "").catch(() => {});

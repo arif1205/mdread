@@ -10,12 +10,14 @@ import hljs from "highlight.js/lib/common";
 
 import { $$, reading, tocList } from "./dom.js";
 import { slug } from "./util.js";
+import { deferImages, loadImages } from "./assets.js";
 
 marked.setOptions({ gfm: true, breaks: false });
 
 /* Tables get a scrolling wrapper so a wide one scrolls sideways instead of
-   spilling out of the column. It is added here, at parse time, rather than after
-   mounting, so patchMarkdown() compares wrapped blocks with wrapped blocks. */
+   spilling out of the column, and local image srcs are parked in data-src so
+   the browser never requests them from our server (see assets.js). Both happen
+   here, on the inert template, so patchMarkdown() compares like with like. */
 function toHtml(md) {
   const tpl = document.createElement("template");
   tpl.innerHTML = DOMPurify.sanitize(marked.parse(md), { ADD_ATTR: ["target"] });
@@ -25,6 +27,7 @@ function toHtml(md) {
     table.replaceWith(wrap);
     wrap.appendChild(table);
   }
+  deferImages(tpl.content);
   return tpl.innerHTML;
 }
 
@@ -117,6 +120,7 @@ export function renderMarkdown(md) {
   for (const el of kids) {
     highlightIn(el);
     linksIn(el);
+    loadImages(el);
   }
 }
 
@@ -178,6 +182,7 @@ export function patchMarkdown(md) {
   for (const el of touched) {
     highlightIn(el);
     linksIn(el);
+    loadImages(el);
   }
 }
 

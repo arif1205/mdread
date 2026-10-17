@@ -3,6 +3,7 @@
 
 import { state } from "./state.js";
 import { $, isMarkdown, supportsFSA } from "./dom.js";
+import { isImage, resetAssets } from "./assets.js";
 import { byPath } from "./util.js";
 import { idbGet } from "./idb.js";
 import { addRecent } from "./recents.js";
@@ -43,6 +44,7 @@ export async function openFiles() {
 }
 
 export async function setRoot(dirHandle) {
+  resetAssets();
   state.rootHandle = dirHandle;
   state.rootName = dirHandle.name;
   await addRecent(dirHandle);
@@ -107,6 +109,11 @@ export async function handleDrop(dt) {
   // fallback: directory entries (read-only)
   if (items.length && items[0].webkitGetAsEntry) {
     const entries = items.map((i) => i.webkitGetAsEntry()).filter(Boolean);
+    // A dropped folder replaces the one open; loose files join it.
+    if (entries.some((e) => e.isDirectory)) {
+      resetAssets();
+      state.rootHandle = null;
+    }
     const collected = [];
     for (const e of entries) await readEntry(e, "", collected);
     if (collected.length) {
@@ -131,9 +138,17 @@ export async function handleDrop(dt) {
 function readEntry(entry, path, out) {
   return new Promise((resolve) => {
     if (entry.isFile) {
+      const p = path ? `${path}/${entry.name}` : entry.name;
+      if (isImage(entry.name)) {
+        entry.file((file) => {
+          state.assets.set(p, file);
+          resolve();
+        }, resolve);
+        return;
+      }
       if (!isMarkdown(entry.name)) return resolve();
       entry.file((file) => {
-        out.push({ name: entry.name, path: path ? `${path}/${entry.name}` : entry.name, file });
+        out.push({ name: entry.name, path: p, file });
         resolve();
       }, resolve);
     } else if (entry.isDirectory) {
@@ -159,6 +174,9 @@ export function wireFallbackInputs() {
   $("#dirFallback").addEventListener("change", (e) => {
     const files = [...e.target.files].filter((f) => isMarkdown(f.name));
     if (!files.length) return;
+    resetAssets();
+    state.rootHandle = null;
+    for (const f of e.target.files) if (isImage(f.name)) state.assets.set(f.webkitRelativePath || f.name, f);
     const added = files.map((f) => ({ name: f.name, path: f.webkitRelativePath || f.name, file: f }));
     state.rootName = files[0].webkitRelativePath?.split("/")[0] || "";
     addFiles(added, true);

@@ -7,6 +7,7 @@ export const state = {
   current: null,
   rootHandle: null,
   rootName: "",
+  assets: new Map(), // path → image File, for read-only folders (see assets.js)
   filter: "",
   shared: false, // booted from a share link — read-only, no local library
 };

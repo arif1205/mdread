@@ -1,0 +1,37 @@
+/* ---------- Links between documents (links.js) ---------- */
+
+/* [[wiki links]] read as ordinary links; one whose document isn't open is dimmed
+   and dashed, so a dead link is visible before you click it. */
+.reading a.is-missing {
+  color: var(--ink-faint);
+  text-decoration-style: dashed; text-decoration-color: var(--line-2);
+  cursor: help;
+}
+
+/* "Linked from" sits under the document, on the same measure. #reading carries
+   a deep bottom pad so the last line can be read mid-screen; when backlinks
+   follow, they take that pad over instead. */
+.reading-scroll:has(> .backlinks:not([hidden])) > .reading { padding-bottom: 2.5rem; }
+.backlinks {
+  max-width: var(--measure); margin: 0 auto;
+  padding: 0 clamp(1.25rem, 5vw, 2rem) 38vh;
+  font-family: var(--sans);
+}
+.backlinks__title {
+  margin: 0 0 .7rem; padding-top: 1.4rem; border-top: 1px solid var(--line);
+  font-family: var(--ui); font-size: .68rem; font-weight: 500; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.backlinks__list { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
+.backlinks__item {
+  display: grid; grid-template-columns: auto 1fr; column-gap: .55rem; row-gap: .1rem;
+  width: 100%; padding: .5rem .65rem; margin: 0 -.65rem; border-radius: 8px; text-align: left;
+  transition: background .15s var(--ease);
+}
+.backlinks__item:hover { background: var(--paper-2); }
+.backlinks__name { font-size: .9rem; font-weight: 600; color: var(--accent); }
+.backlinks__dir { align-self: baseline; font-family: var(--ui); font-size: .68rem; color: var(--ink-faint); }
+.backlinks__line {
+  grid-column: 1 / -1; font-size: .8rem; color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

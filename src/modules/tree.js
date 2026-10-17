@@ -8,6 +8,7 @@ import { idbSet } from "./idb.js";
 import { openDoc } from "./document.js";
 import { setText } from "./editor.js";
 import { openSearch } from "./search.js";
+import { renderBacklinks } from "./links.js";
 import { resetAssets } from "./assets.js";
 import { renderRecents } from "./recents.js";
 import { setMode, setSidebar } from "./view.js";
@@ -47,6 +48,7 @@ export function closeLibrary() {
   setMode("read");
   renderTree();
   renderRecents();
+  renderBacklinks();
 }
 
 export function renderTree() {

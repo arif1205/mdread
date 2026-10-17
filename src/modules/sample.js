@@ -7,6 +7,7 @@ import { renderMarkdown } from "./markdown.js";
 import { updateSub } from "./document.js";
 import { updateCurrentFolder } from "./tree.js";
 import { renderVaultBox } from "./vault.js";
+import { renderBacklinks } from "./links.js";
 
 export function openSample() {
   const f = { name: "Welcome to mdread.md", path: "Welcome to mdread.md", content: SAMPLE, handle: null, file: null };
@@ -18,6 +19,7 @@ export function openSample() {
   setText(SAMPLE);
   updateCurrentFolder();
   renderVaultBox(); // this path doesn't go through openDoc()
+  renderBacklinks();
 }
 
 const SAMPLE = `# A quiet reading room

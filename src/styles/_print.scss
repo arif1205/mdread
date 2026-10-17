@@ -23,7 +23,8 @@
   body > :not(.app),
   .app > :not(.main),
   .main > :not(.panes),
-  .panes > :not(.reading-scroll) { display: none !important; }
+  .panes > :not(.reading-scroll),
+  .reading-scroll > :not(.reading) { display: none !important; }
 
   .app, .main, .panes, .reading-scroll {
     display: block !important; height: auto !important; overflow: visible !important;

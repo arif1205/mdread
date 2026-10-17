@@ -1,19 +1,15 @@
 /* Search inside files (⇧⌘F): a phrase search over the text of every open file,
    with results grouped per file and line, and the hit revealed in the document
    when one is picked. Everything happens in memory — nothing is indexed to disk
-   and nothing touches the network.
-
-   Texts are gathered once per opening of the dialog, so keystrokes only scan
-   strings. The current document is read from the editor, unsaved edits from
-   the file object, and everything else from disk — re-read only when its mtime
-   has moved, through a cache kept apart from file.content so searching never
-   changes what openDoc() sees. */
+   and nothing touches the network. Texts come from corpus.js once per opening
+   of the dialog, so keystrokes only scan strings. */
 
 import { state } from "./state.js";
 import { $, app, reading, readingScroll } from "./dom.js";
 import { escapeHtml, debounce } from "./util.js";
 import { openDoc } from "./document.js";
-import { getText, selectRange } from "./editor.js";
+import { selectRange } from "./editor.js";
+import { allTexts } from "./corpus.js";
 
 const MAX_HITS_PER_FILE = 50; // counted; only the first few are listed
 const SHOWN_PER_FILE = 5;
@@ -22,38 +18,13 @@ const MAX_ROWS = 300;
 const dlg = () => $("#searchDlg");
 const input = () => $("#fsInput");
 
-// file → { lm, text, lower }
-const diskCache = new WeakMap();
 let corpus = []; // [{ file, text, lower }]
 let rows = []; // flat list of result rows, for keyboard navigation
 let active = -1;
 
-async function textOf(f) {
-  if (f === state.current) return getText();
-  if (f.dirty || (!f.handle && f.content != null)) return f.content || "";
-  const blob = f.handle ? await f.handle.getFile() : f.file;
-  if (!blob) return f.content || "";
-  const hit = diskCache.get(f);
-  if (hit && hit.lm === blob.lastModified) return hit.text;
-  const text = await blob.text();
-  diskCache.set(f, { lm: blob.lastModified, text });
-  return text;
-}
-
 async function gather() {
-  const stat = $("#fsStat");
-  stat.textContent = `Reading ${state.files.length} files…`;
-  const out = await Promise.all(
-    state.files.map(async (file) => {
-      try {
-        const text = await textOf(file);
-        return { file, text, lower: text.toLowerCase() };
-      } catch {
-        return null; // moved, deleted, or permission lapsed
-      }
-    }),
-  );
-  corpus = out.filter(Boolean);
+  $("#fsStat").textContent = `Reading ${state.files.length} files…`;
+  corpus = (await allTexts()).map((d) => ({ ...d, lower: d.text.toLowerCase() }));
 }
 
 /* ---------------- matching ---------------- */

@@ -12,6 +12,7 @@ import { savePos, updateProgress } from "./scroll.js";
 import { setMode } from "./view.js";
 import { toast } from "./ui.js";
 import { renderVaultBox } from "./vault.js";
+import { renderBacklinks } from "./links.js";
 
 /* collab.js marks the app while a room is mounted. Reading that, rather than
    importing inRoom() from collab.js, keeps Yjs out of the startup bundle: a
@@ -108,6 +109,7 @@ export async function openDoc(file) {
   refreshTreeState();
   updateCurrentFolder();
   renderVaultBox(); // the "+" reflects whether *this* document is stored
+  renderBacklinks();
 
   // restore reading position
   requestAnimationFrame(() => {
@@ -151,6 +153,7 @@ export function newDoc(content = "") {
   updateSub();
   refreshTreeState();
   renderVaultBox();
+  renderBacklinks();
   setMode("split");
   focusEditor({ end: true });
 }

@@ -11,6 +11,7 @@ import hljs from "highlight.js/lib/common";
 import { $$, reading, tocList } from "./dom.js";
 import { slug } from "./util.js";
 import { deferImages, loadImages } from "./assets.js";
+import { markLinks } from "./links.js";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -154,6 +155,7 @@ export function renderMarkdown(md) {
     highlightIn(el);
     linksIn(el);
     loadImages(el);
+    markLinks(el);
   }
 }
 
@@ -216,6 +218,7 @@ export function patchMarkdown(md) {
     highlightIn(el);
     linksIn(el);
     loadImages(el);
+    markLinks(el);
   }
 }
 

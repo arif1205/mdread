@@ -22,6 +22,7 @@ import { renderRecents, getRecents } from "./modules/recents.js";
 import { wireScroll } from "./modules/scroll.js";
 import { insertImages } from "./modules/editor.js";
 import { wireSearch, openSearch } from "./modules/search.js";
+import { wireLinks } from "./modules/links.js";
 import { wireShare, bootShare } from "./modules/share.js";
 import { wireVault, bootVault } from "./modules/vault.js";
 import { onKey } from "./modules/keyboard.js";
@@ -143,6 +144,7 @@ function wire() {
   wireDiskSync();
   wirePrint();
   wireSearch();
+  wireLinks();
 
   // warn on unsaved
   window.addEventListener("beforeunload", (e) => {

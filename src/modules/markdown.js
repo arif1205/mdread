@@ -14,10 +14,42 @@ import { deferImages, loadImages } from "./assets.js";
 
 marked.setOptions({ gfm: true, breaks: false });
 
-/* Tables get a scrolling wrapper so a wide one scrolls sideways instead of
-   spilling out of the column, and local image srcs are parked in data-src so
-   the browser never requests them from our server (see assets.js). Both happen
-   here, on the inert template, so patchMarkdown() compares like with like. */
+/* GitHub alerts (`> [!NOTE]`) and Obsidian callouts (`> [!tip] Custom title`):
+   the five GitHub kinds, plus Obsidian's names folded onto the nearest one. */
+const CALLOUT_KIND = {
+  note: "note", info: "note", todo: "note", abstract: "note", summary: "note", tldr: "note",
+  example: "note", quote: "note", cite: "note",
+  tip: "tip", hint: "tip", success: "tip", check: "tip", done: "tip",
+  important: "important", question: "important", help: "important", faq: "important",
+  warning: "warning", attention: "warning",
+  caution: "caution", danger: "caution", error: "caution", bug: "caution", failure: "caution", fail: "caution",
+};
+
+// marked leaves the marker as the opening text of the quote's first paragraph.
+function calloutsIn(root) {
+  for (const bq of root.querySelectorAll("blockquote")) {
+    const p = bq.firstElementChild;
+    const text = p?.tagName === "P" ? p.firstChild : null;
+    const m = text?.nodeType === 3 && /^\[!(\w+)\][+-]?[ \t]*([^\n]*)\n?/.exec(text.data);
+    if (!m || !(m[1].toLowerCase() in CALLOUT_KIND)) continue;
+
+    text.data = text.data.slice(m[0].length);
+    if (!p.textContent.trim() && !p.querySelector("img")) p.remove();
+
+    const title = document.createElement("p");
+    title.className = "callout__title";
+    title.textContent = m[2].trim() || m[1][0].toUpperCase() + m[1].slice(1).toLowerCase();
+    bq.prepend(title);
+    bq.className = "callout";
+    bq.dataset.callout = CALLOUT_KIND[m[1].toLowerCase()];
+  }
+}
+
+/* Post-processing on the inert template, so patchMarkdown() compares like with
+   like: tables get a scrolling wrapper so a wide one scrolls sideways instead
+   of spilling out of the column; callouts get their markup; and local image
+   srcs are parked in data-src so the browser never requests them from our
+   server (see assets.js). */
 function toHtml(md) {
   const tpl = document.createElement("template");
   tpl.innerHTML = DOMPurify.sanitize(marked.parse(md), { ADD_ATTR: ["target"] });
@@ -27,6 +59,7 @@ function toHtml(md) {
     table.replaceWith(wrap);
     wrap.appendChild(table);
   }
+  calloutsIn(tpl.content);
   deferImages(tpl.content);
   return tpl.innerHTML;
 }

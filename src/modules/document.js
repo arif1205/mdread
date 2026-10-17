@@ -156,8 +156,9 @@ export function newDoc(content = "") {
 }
 
 // Derive a draft's name/title from its first H1 as you type.
+// A room's document keeps the host's file name, so both sides agree on it.
 export function deriveDraftTitle(f) {
-  if (!f.draft) return;
+  if (!f.draft || f.fromRoom) return;
   const m = getText().match(/^\s{0,3}#\s+(.+?)\s*#*\s*$/m);
   const title = (m && m[1].trim()) || "Untitled";
   const name = ensureMd(title);

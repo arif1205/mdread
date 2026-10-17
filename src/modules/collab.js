@@ -180,6 +180,9 @@ export async function enterRoom({ id, keyStr, seed = null }) {
         setText(ytext.toString());
       } else if (!seed) {
         mountGuestDoc(ymeta.get("name") || "Shared document", ytext.toString());
+        // In a fresh room we can sync before the host's first update lands, so
+        // the name may arrive after this; follow it rather than reading it once.
+        ymeta.observe(() => nameGuestDoc(ymeta.get("name")));
       }
       room.unbind = bindEditor(ytext);
       room.mounted = true;
@@ -252,9 +255,20 @@ function bindEditor(ytext) {
 
 /* ---------------- guest arrival ---------------- */
 
+const asMd = (name) => (/\.\w+$/.test(name) ? name : name + ".md");
+
+function nameGuestDoc(name) {
+  const f = state.current;
+  if (!name || !f?.fromRoom || f.name === asMd(name)) return;
+  f.name = asMd(name);
+  f.path = name;
+  docName.textContent = name.replace(/\.\w+$/, "");
+  renderTree();
+}
+
 function mountGuestDoc(name, text) {
   const f = {
-    name: /\.\w+$/.test(name) ? name : name + ".md",
+    name: asMd(name),
     path: name,
     content: text,
     handle: null,
@@ -304,6 +318,4 @@ function setStatus(stateName) {
      part and it is deliberately untouched here.
    - No revocation. The room lives until 30 days of silence (worker/room.js).
      Rotating the key means a new link, as with shares.
-   - Rooms are not in the vault, so a link you make is not remembered anywhere.
-   - `deriveDraftTitle` still renames a guest's draft from its first H1, so
-     names can drift from the host's filename. Cosmetic, local-only. */
+   - Rooms are not in the vault, so a link you make is not remembered anywhere. */

@@ -1,0 +1,23 @@
+{
+  "note": "Sealed by mdread's share format v1 (crypto FORMAT 1, bundle v 1) on 2026-10-17. Never regenerate: tests must prove links made back then still open.",
+  "keyStr": "AwoRGB8mLTQ7QklQV15lbHN6gYiPlp2kq7K5wMfO1dw",
+  "stored": "AQFICLY5rS3d4wAethxvpMM1WnPWavySev8onyhuiJQEboqHVV7cKvlWJGwP5l3bIuwl4ut1IKDx3_V8X0GOS5kgbqfY66lXFGs48vGJAkmIouXd2ROc1vE9ZQhWLkhix2yrX0mf5_I4Njo5r90k20UWDkGFxMSeCCNyTsv4oMBEGrWLY1CUHPMMbOH4fA9UtYJ6M1Gfn1nMysX_yC0fEuou0K1nDUjh05tfUC_5bFdP4RpkUoLWOHDCM5vTXOrECLrK_pSR7EzMbX13zzfrkFmo2NszcAmtQJIoCuIhqtA",
+  "inline": "AQFICLY5rS3d4wAethxvpMM1WnPWavySev8onyhuiJQEboqHVV7cKvlWJGwP5l3bIuwl4ut1IKDx3_V8X0GOS5kgbqfY66lXFGs48vGJAkmIouXd2ROc1vE9ZQhWLkhix2yrX0mf5_I4Njo5r90k20UWDkGFxMSeCCNyTsv4oMBEGrWLY1CUHPMMbOH4fA9UtYJ6M1Gfn1nMysX_yC0fEuou0K1nDUjh05tfUC_5bFdP4RpkUoLWOHDCM5vTXOrECLrK_pSR7EzMbX13zzfrkFmo2NszcAmtQJIoCuIhqtADChEYHyYtNDtCSVBXXmVsc3qBiI-WnaSrsrnAx87V3A",
+  "bundle": {
+    "v": 1,
+    "kind": "folder",
+    "name": "Fixture notes",
+    "files": [
+      {
+        "path": "notes/a.md",
+        "name": "a.md",
+        "content": "# Café ☕\n\nUnicode, **markdown**, and a table:\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+      },
+      {
+        "path": "notes/b.md",
+        "name": "b.md",
+        "content": "Second file."
+      }
+    ]
+  }
+}

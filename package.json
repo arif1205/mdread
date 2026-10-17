@@ -11,12 +11,14 @@
     "preview": "vite preview",
     "deploy": "vite build && wrangler deploy",
     "deploy:prod": "vite build && wrangler deploy --env production",
-    "deploy:pages": "vite build && wrangler pages deploy dist --project-name markread"
+    "deploy:pages": "vite build && wrangler pages deploy dist --project-name markread",
+    "test": "vitest run"
   },
   "devDependencies": {
     "sass": "^1.100.0",
     "vite": "^8.0.14",
     "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^3.2.7",
     "wrangler": "^4.0.0"
   },
   "dependencies": {

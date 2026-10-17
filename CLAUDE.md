@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A local-first Markdown reader/editor. **No framework, no tests.** It's a Vite + SCSS app
+A local-first Markdown reader/editor. **No framework.** It's a Vite + SCSS app
 of plain ES modules; files are read in the browser and nothing is uploaded unless the
 user explicitly shares. `vite build` bundles `src/` + `public/` into `dist/`, and `dist/`
 is what Cloudflare serves.
@@ -42,12 +42,19 @@ npm install
 npm run dev       # Vite dev server, hot reload → http://localhost:5173  (no Worker: /api/* is absent, sharing disabled)
 npm run dev:worker# vite build && wrangler dev → http://localhost:8787   (the real thing, KV simulated locally)
 npm run build     # bundle + compile SCSS → ./dist
+npm test          # Vitest, Node only: crypto, share-bundle format, image refs
 npm run preview   # serve ./dist as deployed → http://localhost:4173     (also no Worker)
 npm run deploy        # vite build → wrangler deploy (Cloudflare Workers Assets)
 npm run deploy:pages  # vite build → wrangler pages deploy dist  (static only — no share API)
 ```
 
-No lint and no test runner. To verify a change: `npm run build` (Rolldown errors on any
+No lint. **Tests cover only the pure modules** (`crypto.js`, `bundle.js`, `refs.js`) and run in
+plain Node — keep those modules free of DOM and app-state imports so they stay testable. UI is
+verified by hand. `test/fixtures/v1-bundle.json` is a share sealed by the first bundle format:
+**never regenerate it** — it is what proves links already sent still open. If a change breaks
+it, the change is wrong, not the fixture.
+
+To verify a change: `npm run build` (Rolldown errors on any
 unresolved import, so a green build means the module graph is sound), then `npm run preview`
 and check it in Chrome/Edge — live "save to disk" needs the File System Access API, served
 over `localhost` or HTTPS. **Anything touching sharing must be checked under
@@ -69,7 +76,9 @@ All behaviour lives in `src/modules/*.js` — plain ES modules, one concern each
 - `markdown.js` — render pipeline · `files.js` / `tree.js` / `document.js` — sources, file tree, open/new doc
 - `editor.js` / `save.js` — editing + saving · `cm.js` — CodeMirror 6, see below · `view.js` / `scroll.js` / `ui.js` — modes, prefs, progress, toasts
 - `crypto.js` — AES-GCM, gzip, and PBKDF2 primitives, pure bytes-in/bytes-out
-- `share.js` — bundle format, the share dialog, and `bootShare()` (the shared-link viewer)
+- `share.js` — the share dialog, building/mounting bundles, and `bootShare()` (the shared-link viewer)
+- `bundle.js` — the share bundle wire format (pure; `assets` carries images, additive to v1) ·
+  `refs.js` — finding/resolving local image paths (pure)
 - `vault.js` — sign-in, master-password unlock, share-list sync, and vault documents
   (`data-vault` panes in the account dialog, `data-state` on the sidebar vault panel;
   account controls live in the vault dialog footer, not the sidebar)

@@ -12,24 +12,28 @@
                        No bundle is uploaded: the document itself arrives as
                        sealed CRDT updates over a WebSocket.
 
-   A share bundle is JSON: { v, kind, name, files: [{ path, name, content }] }
-   It is gzipped and sealed by crypto.js before it ever touches the network. */
+   The bundle format itself — and the promise that old links keep opening — is
+   in bundle.js. It is gzipped and sealed before it ever touches the network. */
 
 import { state } from "./state.js";
 import { $, $$, app, MD_RE } from "./dom.js";
 import { getText } from "./editor.js";
 import { readJSON } from "./util.js";
-import { newKey, exportKey, importKey, seal, open as unseal, toB64url, fromB64url } from "./crypto.js";
+import { newKey, exportKey, toB64url } from "./crypto.js";
+import { BUNDLE_V, sealBundle, openBundle, packInline, unpackInline, encodeAsset, decodeAsset } from "./bundle.js";
+import { localImageRefs, resolvePath } from "./refs.js";
+import { fileAt, resetAssets } from "./assets.js";
 import { renderTree } from "./tree.js";
 import { openDoc } from "./document.js";
 import { toast } from "./ui.js";
 import { syncSoon, onVaultChange } from "./vault.js";
 
-const BUNDLE_V = 1;
-const KEY_BYTES = 32; // raw AES-256 key, appended to self-contained payloads
 const MAX_PLAINTEXT = 2 * 1024 * 1024; // 2 MB of markdown is a very large folder
 const MAX_PAYLOAD = 1024 * 1024; // matches the Worker's cap
 const INLINE_MAX = 8000; // base64url chars — keeps self-contained links pasteable
+// Raw image bytes per stored link. base64 adds a third, gzip takes little back
+// from already-compressed images, so this keeps text + images under MAX_PAYLOAD.
+const MAX_IMAGES = 640 * 1024;
 const SHARES_KEY = "markread:shares";
 
 /* ---------------- the local record of what you've shared ----------------
@@ -75,7 +79,34 @@ async function contentOf(f) {
   return "";
 }
 
-async function buildBundle(scope) {
+/* The images the bundle's documents reference, read from the open folder, up to
+   MAX_IMAGES in total. Ones that don't fit or can't be found are left out and
+   counted, so the dialog can say so; the documents still render without them. */
+async function bundleImages(files) {
+  const paths = new Set();
+  for (const f of files) {
+    for (const src of localImageRefs(f.content)) {
+      const p = resolvePath(f.path, src);
+      if (p) paths.add(p);
+    }
+  }
+  const assets = [];
+  let bytes = 0;
+  let skipped = 0;
+  for (const path of paths) {
+    const file = await fileAt(path).catch(() => null);
+    if (!file) continue; // not beside the document — nothing to send
+    if (bytes + file.size > MAX_IMAGES) {
+      skipped++;
+      continue;
+    }
+    bytes += file.size;
+    assets.push(encodeAsset(path, file.type, new Uint8Array(await file.arrayBuffer())));
+  }
+  return { assets, skipped };
+}
+
+async function buildBundle(scope, { images = false } = {}) {
   const picked = scope === "folder" ? state.files : [state.current];
   const files = [];
   let total = 0;
@@ -95,27 +126,25 @@ async function buildBundle(scope) {
 
   if (!files.length) throw new Error("Nothing to share");
   const name = scope === "folder" ? state.rootName || "Shared folder" : files[0].name.replace(MD_RE, "");
-  return { v: BUNDLE_V, kind: scope, name, files };
+  const bundle = { v: BUNDLE_V, kind: scope, name, files };
+  let skipped = 0;
+  if (images) {
+    const found = await bundleImages(files);
+    if (found.assets.length) bundle.assets = found.assets;
+    skipped = found.skipped;
+  }
+  return { bundle, skipped };
 }
 
 /* ---------------- creating a share ---------------- */
 
+// Self-contained links are text only: an image would blow far past INLINE_MAX.
 export async function createShare({ scope, inline, expiryDays }) {
-  const bundle = await buildBundle(scope);
-  const key = await newKey();
-  const payload = await seal(key, JSON.stringify(bundle));
-  const keyStr = await exportKey(key);
+  const { bundle, skipped } = await buildBundle(scope, { images: !inline });
+  const { payload, keyStr } = await sealBundle(bundle);
 
   if (inline) {
-    // Nothing is uploaded, so there is no `#k=` to carry the key separately —
-    // it rides along at the tail of the payload. Still never sent anywhere:
-    // the whole thing lives in the fragment.
-    const raw = fromB64url(keyStr);
-    const withKey = new Uint8Array(payload.length + raw.length);
-    withKey.set(payload, 0);
-    withKey.set(raw, payload.length);
-
-    const data = toB64url(withKey);
+    const data = packInline(payload, keyStr);
     if (data.length > INLINE_MAX) throw new Error("Too long for a self-contained link — use an encrypted link instead");
     return { url: `${location.origin}/#d=${data}`, inline: true, name: bundle.name };
   }
@@ -136,7 +165,7 @@ export async function createShare({ scope, inline, expiryDays }) {
   const { id, deleteToken, expiresAt } = await res.json();
   const url = `${location.origin}/s/${id}#k=${keyStr}`;
   rememberShare({ id, key: keyStr, deleteToken, name: bundle.name, kind: scope, count: bundle.files.length, expiresAt });
-  return { url, inline: false, name: bundle.name, expiresAt };
+  return { url, inline: false, name: bundle.name, expiresAt, images: bundle.assets?.length || 0, skipped };
 }
 
 /* ---------------- co-editing rooms (spike) ----------------
@@ -214,12 +243,7 @@ export async function bootShare() {
     let payload, keyStr;
 
     if (link.inline) {
-      const all = fromB64url(link.data);
-      if (all.length <= KEY_BYTES) throw new Error("This link looks truncated");
-      // A self-contained link carries its own key at the end of the payload.
-      const split = all.length - KEY_BYTES;
-      keyStr = toB64url(all.subarray(split));
-      payload = all.subarray(0, split);
+      ({ payload, keyStr } = unpackInline(link.data));
     } else {
       if (!link.keyStr) throw new Error("This link is missing its key — it may have been truncated when it was copied");
       keyStr = link.keyStr;
@@ -229,11 +253,7 @@ export async function bootShare() {
       payload = new Uint8Array(await res.arrayBuffer());
     }
 
-    const json = await unseal(await importKey(keyStr), payload);
-    const bundle = JSON.parse(json);
-    if (bundle.v !== BUNDLE_V) throw new Error("This link was made by a newer version of mdread");
-
-    await mountBundle(bundle);
+    await mountBundle(await openBundle(payload, keyStr));
     return true;
   } catch (e) {
     app.dataset.shared = "error";
@@ -245,6 +265,12 @@ export async function bootShare() {
 async function mountBundle(bundle) {
   state.shared = true;
   state.rootName = bundle.name;
+  // Shared images join the same lookup a read-only folder uses (assets.js).
+  resetAssets();
+  for (const a of bundle.assets || []) {
+    const { path, type, bytes } = decodeAsset(a);
+    state.assets.set(path, new File([bytes], path.split("/").pop(), { type }));
+  }
   state.files = bundle.files.map((f) => ({
     name: f.name,
     path: f.path,
@@ -371,6 +397,14 @@ export function wireShare() {
             expiryDays: +$("#shareExpiry").value,
           });
       $("#shareLiveNote").hidden = !live;
+      const imgNote = $("#shareImagesNote");
+      const n = out.images || 0;
+      imgNote.textContent = out.skipped
+        ? `${n ? `${n} image${n === 1 ? "" : "s"} included; ` : ""}${out.skipped} left out — a link carries up to ${MAX_IMAGES / 1024} KB of images.`
+        : n
+          ? `${n} image${n === 1 ? "" : "s"} included, encrypted along with the text.`
+          : "";
+      imgNote.hidden = !imgNote.textContent;
       $("#shareUrl").value = out.url;
       $("#shareResult").hidden = false;
       btn.hidden = true;

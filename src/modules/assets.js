@@ -14,6 +14,7 @@
 
 import { state } from "./state.js";
 import { toast } from "./ui.js";
+import { isLocalSrc, resolvePath } from "./refs.js";
 
 const IMG_RE = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/i;
 export const isImage = (name) => IMG_RE.test(name);
@@ -28,29 +29,9 @@ export function resetAssets() {
   state.assets = new Map();
 }
 
-// Anything with a scheme (https:, data:, blob:), protocol-relative, or a bare
-// fragment is left alone.
-const isLocal = (src) => !!src && !/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(src);
-
-/* `src` relative to the document at `docPath`, as a folder-relative path, or null
-   when it climbs out of the folder. A leading "/" means the folder root. */
-function resolvePath(docPath, src) {
-  let clean = src.replace(/[?#].*$/, "");
-  try {
-    clean = decodeURI(clean);
-  } catch {}
-  const parts = clean.startsWith("/") ? [] : docPath.split("/").slice(0, -1);
-  for (const seg of clean.split("/")) {
-    if (!seg || seg === ".") continue;
-    if (seg === "..") {
-      if (!parts.length) return null;
-      parts.pop();
-    } else parts.push(seg);
-  }
-  return parts.join("/");
-}
-
-async function fileAt(path) {
+// The File at a folder-relative path, from either source — null when there is
+// nowhere to look, and a rejection when the folder has no such file.
+export async function fileAt(path) {
   const collected = state.assets?.get(path);
   if (collected) return collected;
   if (!state.rootHandle) return null;
@@ -76,7 +57,7 @@ function urlFor(path) {
 export function deferImages(root) {
   for (const img of root.querySelectorAll("img[src]")) {
     const src = img.getAttribute("src");
-    if (!isLocal(src)) continue;
+    if (!isLocalSrc(src)) continue;
     img.dataset.src = src;
     img.removeAttribute("src");
   }

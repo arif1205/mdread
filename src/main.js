@@ -20,7 +20,6 @@ import { saveDoc, downloadDoc } from "./modules/save.js";
 import { toggleTypePop, hint, wireUi } from "./modules/ui.js";
 import { renderRecents, getRecents } from "./modules/recents.js";
 import { wireScroll } from "./modules/scroll.js";
-import { wireEditor } from "./modules/editor.js";
 import { wireShare, bootShare } from "./modules/share.js";
 import { wireVault, bootVault } from "./modules/vault.js";
 import { onKey } from "./modules/keyboard.js";
@@ -129,7 +128,6 @@ function wire() {
   window.addEventListener("keydown", onKey);
 
   // listeners that used to be attached at module top-level
-  wireEditor();
   wireScroll();
   wireUi();
   wireShare();

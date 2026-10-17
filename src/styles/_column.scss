@@ -49,13 +49,30 @@
 .app[data-mode="edit"] .editor-pane,
 .app[data-mode="split"] .editor-pane { display: block; }
 
-.editor {
-  display: block; width: 100%; height: 100%; resize: none; border: none; outline: none;
-  background: var(--paper); color: var(--ink);
-  font-family: var(--mono); font-size: 1.01rem; line-height: 1.85;
+/* CodeMirror mounts inside #editor. Its own base theme is injected at runtime
+   with two-class selectors, so these rules carry a third to win. The scroller
+   spans the pane (scrollbar at the edge); the text column is held to 50rem. */
+.editor { height: 100%; background: var(--paper); color: var(--ink); }
+.editor .cm-editor { height: 100%; background: none; }
+.editor .cm-editor.cm-focused { outline: none; }
+.editor .cm-editor .cm-scroller { font-family: var(--mono); font-size: 1.01rem; line-height: 1.85; }
+.app[data-mode="split"] .editor .cm-editor .cm-scroller { font-size: .95rem; }
+.editor .cm-editor .cm-content {
+  max-width: 50rem; margin: 0 auto; box-sizing: border-box; width: 100%;
   padding: clamp(2rem, 5vh, 3.5rem) clamp(1.25rem, 5vw, 2rem) 42vh;
-  max-width: 50rem; margin: 0 auto; tab-size: 2;
   caret-color: var(--accent);
 }
-.app[data-mode="split"] .editor { font-size: .95rem; }
-.editor::placeholder { color: var(--ink-faint); }
+.editor .cm-editor .cm-line { padding: 0; }
+.editor .cm-editor .cm-cursor { border-left: 2px solid var(--accent); }
+.editor .cm-editor .cm-selectionBackground,
+.editor .cm-editor.cm-focused .cm-selectionBackground { background: var(--sel); }
+.editor .cm-editor .cm-placeholder { color: var(--ink-faint); }
+
+/* markdown tokens (classHighlighter) — the syntax stays visible, just quieter */
+.editor .tok-heading { color: var(--ink); font-weight: 700; }
+.editor .tok-strong { font-weight: 700; }
+.editor .tok-emphasis { font-style: italic; }
+.editor .tok-meta { color: var(--ink-faint); }
+.editor .tok-link, .editor .tok-labelName { color: var(--accent); }
+.editor .tok-url { color: var(--ink-faint); text-decoration: underline; text-decoration-color: var(--line-2); }
+.editor .tok-comment { color: var(--c-com); font-style: italic; }

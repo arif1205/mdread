@@ -2,7 +2,8 @@
    have one, fall back to a "Save As" picker for drafts, and download otherwise. */
 
 import { state } from "./state.js";
-import { app, editor, docName, MD_RE, supportsFSA } from "./dom.js";
+import { app, docName, MD_RE, supportsFSA } from "./dom.js";
+import { getText } from "./editor.js";
 import { ensureMd } from "./util.js";
 import { renderMarkdown } from "./markdown.js";
 import { renderTree, refreshTreeState } from "./tree.js";
@@ -27,7 +28,7 @@ export async function saveDoc() {
   const f = state.current;
   if (!f) return;
   // commit editor content if in an edit view
-  if (app.dataset.mode !== "read") f.content = editor.value;
+  if (app.dataset.mode !== "read") f.content = getText();
 
   // No file on disk yet (new draft, or a read-only dropped file): offer "Save As".
   if (!f.handle && supportsFSA && window.showSaveFilePicker) {
@@ -84,7 +85,7 @@ export async function saveDoc() {
 export function downloadDoc() {
   const f = state.current;
   if (!f) return;
-  if (app.dataset.mode !== "read") f.content = editor.value;
+  if (app.dataset.mode !== "read") f.content = getText();
   const blob = new Blob([f.content], { type: "text/markdown" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

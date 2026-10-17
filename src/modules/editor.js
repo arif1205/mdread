@@ -1,5 +1,10 @@
-/* The markdown editor: live preview, dirty tracking, undo-safe insertion, and
-   smart-writing keys (continue lists/quotes, indent, bold/italic/link). */
+/* The markdown editor's facade: live preview and dirty tracking, plus the text
+   operations the rest of the app uses — getText / setText / replaceText /
+   focusEditor, and setCollab for collab.js. Nothing else touches CodeMirror.
+
+   CodeMirror itself (cm.js) is loaded the first time an editing view opens.
+   Until then the text is held in `pending`, so opening, reading and saving
+   documents never wait on the editor. */
 
 import { state } from "./state.js";
 import { app, editor } from "./dom.js";
@@ -8,83 +13,18 @@ import { renderMarkdown } from "./markdown.js";
 import { deriveDraftTitle, updateSub } from "./document.js";
 import { refreshTreeState } from "./tree.js";
 
+let cm = null; // the mounted editor, once loaded
+let pending = ""; // the buffer's text until then
+let loading = null;
+
 const liveRender = debounce(() => {
   if (!state.current) return;
-  state.current.content = editor.value;
-  if (app.dataset.mode === "split") renderMarkdown(editor.value);
+  const text = getText();
+  state.current.content = text;
+  if (app.dataset.mode === "split") renderMarkdown(text);
   deriveDraftTitle(state.current);
   markDirty();
 }, 140);
-
-// Undo-safe text insertion (execCommand keeps the native undo stack alive).
-function edInsert(str) {
-  if (!document.execCommand("insertText", false, str)) {
-    const s = editor.selectionStart,
-      e = editor.selectionEnd;
-    editor.setRangeText(str, s, e, "end");
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-  }
-}
-
-function edReplace(start, end, str) {
-  editor.focus();
-  editor.setSelectionRange(start, end);
-  edInsert(str);
-}
-
-function wrapSel(pre, post) {
-  const s = editor.selectionStart,
-    en = editor.selectionEnd;
-  const sel = editor.value.slice(s, en);
-  edReplace(s, en, pre + sel + post);
-  if (s === en) {
-    const p = s + pre.length;
-    editor.setSelectionRange(p, p);
-  } else editor.setSelectionRange(s + pre.length, s + pre.length + sel.length);
-}
-
-function linkSel() {
-  const s = editor.selectionStart,
-    en = editor.selectionEnd;
-  const sel = editor.value.slice(s, en) || "text";
-  edReplace(s, en, `[${sel}](url)`);
-  const us = s + sel.length + 3; // position of "url"
-  editor.setSelectionRange(us, us + 3);
-}
-
-function indentLines() {
-  const v = editor.value,
-    s = editor.selectionStart,
-    en = editor.selectionEnd;
-  const ls = v.lastIndexOf("\n", s - 1) + 1;
-  const block = v.slice(ls, en);
-  edReplace(ls, en, block.replace(/^/gm, "  "));
-  editor.setSelectionRange(s + 2, en + 2 * block.split("\n").length);
-}
-
-function outdentLines() {
-  const v = editor.value,
-    s = editor.selectionStart,
-    en = editor.selectionEnd;
-  const ls = v.lastIndexOf("\n", s - 1) + 1;
-  const block = v.slice(ls, en);
-  let first = 0,
-    total = 0;
-  const out = block
-    .split("\n")
-    .map((ln, i) => {
-      const mm = ln.match(/^( {1,2}|\t)/);
-      if (mm) {
-        total += mm[1].length;
-        if (i === 0) first = mm[1].length;
-        return ln.slice(mm[1].length);
-      }
-      return ln;
-    })
-    .join("\n");
-  edReplace(ls, en, out);
-  editor.setSelectionRange(Math.max(ls, s - first), en - total);
-}
 
 function markDirty() {
   const f = state.current;
@@ -94,71 +34,37 @@ function markDirty() {
   refreshTreeState();
 }
 
-// Attach the editor's input + keydown listeners. Wired once from main.
-export function wireEditor() {
-  editor.addEventListener("input", liveRender);
-
-  // Smart writing: continue lists/quotes, indent, and format shortcuts.
-  editor.addEventListener("keydown", (e) => {
-    const meta = e.metaKey || e.ctrlKey;
-    const v = editor.value,
-      s = editor.selectionStart,
-      en = editor.selectionEnd;
-
-    if (meta && !e.altKey && !e.shiftKey) {
-      const k = e.key.toLowerCase();
-      if (k === "b") {
-        e.preventDefault();
-        wrapSel("**", "**");
-        return;
-      }
-      if (k === "i") {
-        e.preventDefault();
-        wrapSel("*", "*");
-        return;
-      }
-      if (k === "k") {
-        e.preventDefault();
-        linkSel();
-        return;
-      }
-    }
-
-    if (e.key === "Tab") {
-      e.preventDefault();
-      e.shiftKey ? outdentLines() : indentLines();
-      return;
-    }
-
-    if (e.key === "Enter" && !e.shiftKey && !meta && s === en) {
-      const ls = v.lastIndexOf("\n", s - 1) + 1;
-      const line = v.slice(ls, s);
-      // list / task item
-      const m = line.match(/^(\s*)([-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?/);
-      if (m) {
-        if (line.slice(m[0].length).trim() === "") {
-          e.preventDefault();
-          edReplace(ls, s, m[1]);
-          return;
-        }
-        e.preventDefault();
-        const ord = m[2].match(/^(\d+)([.)])$/);
-        const marker = ord ? `${parseInt(ord[1], 10) + 1}${ord[2]} ` : `${m[2]} `;
-        edInsert("\n" + m[1] + marker + (m[3] ? "[ ] " : ""));
-        return;
-      }
-      // blockquote
-      const q = line.match(/^(\s*>(?: )?)+/);
-      if (q) {
-        if (line.replace(/^(\s*>\s?)+/, "").trim() === "") {
-          e.preventDefault();
-          edReplace(ls, s, "");
-          return;
-        }
-        e.preventDefault();
-        edInsert("\n" + q[0]);
-        return;
-      }
-    }
+// Load and mount CodeMirror (once), seeded with whatever text is pending.
+export function loadEditor() {
+  loading ??= import("./cm.js").then(({ mountEditor }) => {
+    cm = mountEditor(editor, pending, liveRender);
+    return cm;
   });
+  return loading;
+}
+
+export function getText() {
+  return cm ? cm.getText() : pending;
+}
+
+// Load a document: fresh undo history, caret at the start.
+export function setText(text = "") {
+  if (cm) cm.setText(text);
+  else pending = text;
+}
+
+// Bring the buffer in line with `text`, keeping caret, scroll and undo history.
+export function replaceText(text) {
+  if (cm) cm.replaceText(text);
+  else pending = text;
+}
+
+export async function focusEditor({ end = false } = {}) {
+  (await loadEditor()).focus(end);
+}
+
+/* collab.js hands in y-codemirror's extension when joining a room, and null to
+   go back to local undo. Only valid once loadEditor() has resolved. */
+export function setCollab(ext) {
+  cm?.setCollab(ext);
 }

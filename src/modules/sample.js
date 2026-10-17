@@ -1,7 +1,8 @@
 /* The built-in sample document shown from the welcome screen. */
 
 import { state } from "./state.js";
-import { app, docName, editor } from "./dom.js";
+import { app, docName } from "./dom.js";
+import { setText } from "./editor.js";
 import { renderMarkdown } from "./markdown.js";
 import { updateSub } from "./document.js";
 import { updateCurrentFolder } from "./tree.js";
@@ -14,7 +15,7 @@ export function openSample() {
   docName.textContent = "Welcome to mdread";
   updateSub();
   renderMarkdown(SAMPLE);
-  editor.value = SAMPLE;
+  setText(SAMPLE);
   updateCurrentFolder();
   renderVaultBox(); // this path doesn't go through openDoc()
 }

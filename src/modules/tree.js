@@ -2,10 +2,11 @@
    "current folder" chip, and closing the library back to the welcome screen. */
 
 import { state } from "./state.js";
-import { $$, tree, curFolder, curFolderName, searchInput, app, reading, editor, tocList, docName, docSub, MD_RE } from "./dom.js";
+import { $$, tree, curFolder, curFolderName, searchInput, app, reading, tocList, docName, docSub, MD_RE } from "./dom.js";
 import { escapeHtml } from "./util.js";
 import { idbSet } from "./idb.js";
 import { openDoc } from "./document.js";
+import { setText } from "./editor.js";
 import { renderRecents } from "./recents.js";
 import { setMode, setSidebar } from "./view.js";
 import { savePos } from "./scroll.js";
@@ -36,7 +37,7 @@ export function closeLibrary() {
   idbSet("lastDoc", "").catch(() => {});
   app.dataset.hasDoc = "false";
   reading.innerHTML = "";
-  editor.value = "";
+  setText("");
   tocList.innerHTML = "";
   docName.textContent = "No document";
   docSub.textContent = "";

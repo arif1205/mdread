@@ -15,8 +15,14 @@ export default defineConfig({
         // function here, not the classic object form.)
         manualChunks(id) {
           if (/node_modules\/(marked|dompurify|highlight\.js)\//.test(id)) return "vendor";
+          // The editor is its own long-lived chunk for the same reason.
+          if (/node_modules\/(@codemirror|@lezer|style-mod|w3c-keyname|crelt)\//.test(id)) return "editor";
           // Yjs is only reached through the dynamic import in share.js, so it
           // stays a lazy chunk — a reader who never co-edits never fetches it.
+          // y-codemirror.next is left out on purpose: Rolldown pulls a matched
+          // module's dependencies into its group, which would drag CodeMirror
+          // itself in here and make this chunk load eagerly. Unmatched, it rides
+          // along with collab.js's own lazy chunk.
           if (/node_modules\/(yjs|lib0)\//.test(id)) return "collab";
         },
       },

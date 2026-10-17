@@ -14,8 +14,11 @@
  */
 
 import * as Y from "yjs";
+import { keymap } from "@codemirror/view";
+import { yCollab, yUndoManagerKeymap, YSyncConfig } from "y-codemirror.next";
 import { state } from "./state.js";
-import { $, app, editor, docName } from "./dom.js";
+import { $, app, docName } from "./dom.js";
+import { setText, replaceText, setCollab, loadEditor } from "./editor.js";
 import { debounce } from "./util.js";
 import { sealBytes, openBytes, importKeyRW } from "./crypto.js";
 import { renderMarkdown, patchMarkdown } from "./markdown.js";
@@ -172,13 +175,13 @@ export async function enterRoom({ id, keyStr, seed = null }) {
           ytext.insert(0, seed.text);
           ymeta.set("name", seed.name);
         }, LOCAL);
-        // The textarea is the binding's baseline, so make certain it matches
-        // what we just published before onInput can diff against it.
-        editor.value = ytext.toString();
+        // y-codemirror syncs changes from the moment it binds, not the initial
+        // content, so the buffer must match what we just published.
+        setText(ytext.toString());
       } else if (!seed) {
         mountGuestDoc(ymeta.get("name") || "Shared document", ytext.toString());
       }
-      room.unbind = bindEditor(doc, ytext);
+      room.unbind = bindEditor(ytext);
       room.mounted = true;
       app.dataset.collab = "on";
     } else {
@@ -207,87 +210,44 @@ export function leaveRoom() {
   delete app.dataset.collab;
 }
 
-/* ---------------- the textarea binding ----------------
+/* ---------------- the editor binding ----------------
 
-   The whole reason this spike is small: a plain <textarea> can drive a CRDT
-   without becoming a custom editor. On input we diff old against new by common
-   prefix and suffix — which covers typing, backspacing, paste and select-and-
-   replace — and turn that into one delete + one insert. Remote edits splice the
-   value back in and move the caret by the size of the changes ahead of it. */
+   y-codemirror.next keeps the CodeMirror buffer and the Y.Text in step in both
+   directions, and swaps undo over to a Y.UndoManager so ⌘Z only ever undoes your
+   own edits. Its keystrokes reach the Y.Text with the binding's config as the
+   origin; editor.js already renders and marks those, so the observer below only
+   handles what arrived from elsewhere — a peer's edit, or an undo. */
 
-function bindEditor(doc, ytext) {
-  let applying = false;
+function bindEditor(ytext) {
+  let bound = true;
 
-  const onInput = () => {
-    if (applying) return;
-    const cur = ytext.toString();
-    const next = editor.value;
-    if (cur === next) return;
+  /* CodeMirror may still be loading, and peers' edits can land in the Y.Text
+     meanwhile. y-codemirror only syncs changes made after it binds, so bring the
+     buffer level with the Y.Text in the same tick as binding — no await between
+     the two, or an update could slip through the gap. */
+  loadEditor().then(() => {
+    if (!bound) return;
+    replaceText(ytext.toString());
+    setCollab([yCollab(ytext, null), keymap.of(yUndoManagerKeymap)]);
+  });
 
-    let s = 0;
-    const max = Math.min(cur.length, next.length);
-    while (s < max && cur.charCodeAt(s) === next.charCodeAt(s)) s++;
-
-    let ec = cur.length;
-    let en = next.length;
-    while (ec > s && en > s && cur.charCodeAt(ec - 1) === next.charCodeAt(en - 1)) {
-      ec--;
-      en--;
-    }
-
-    doc.transact(() => {
-      if (ec > s) ytext.delete(s, ec - s);
-      if (en > s) ytext.insert(s, next.slice(s, en));
-    }, LOCAL);
-  };
-
-  const onChange = (ev, tr) => {
-    if (tr.origin === LOCAL) return; // our own edit, already in the textarea
-    const text = ytext.toString();
-    const focused = document.activeElement === editor;
-    const a = shiftCaret(ev.delta, editor.selectionStart, text.length);
-    const b = shiftCaret(ev.delta, editor.selectionEnd, text.length);
-    const top = editor.scrollTop;
-
-    applying = true;
-    editor.value = text;
-    if (focused) editor.setSelectionRange(a, b);
-    editor.scrollTop = top;
-    applying = false;
-
+  const onChange = (_ev, tr) => {
+    if (tr.origin === LOCAL || tr.origin instanceof YSyncConfig) return;
     if (state.current) {
-      state.current.content = text;
+      state.current.content = ytext.toString();
       state.current.dirty = true;
       updateSub();
     }
     // In edit mode there is no preview on screen to update.
     if (app.dataset.mode !== "edit") renderSoon();
   };
-
-  editor.addEventListener("input", onInput);
   ytext.observe(onChange);
 
   return () => {
-    editor.removeEventListener("input", onInput);
+    bound = false;
     ytext.unobserve(onChange);
+    setCollab(null);
   };
-}
-
-// Move a caret offset across a Yjs delta: anything inserted or deleted *before*
-// it shifts it, anything after leaves it alone.
-function shiftCaret(delta, pos, len) {
-  let at = 0;
-  let out = pos;
-  for (const op of delta) {
-    if (op.retain != null) at += op.retain;
-    else if (typeof op.insert === "string") {
-      if (at < out) out += op.insert.length;
-      at += op.insert.length;
-    } else if (op.delete != null) {
-      if (at < out) out -= Math.min(op.delete, out - at);
-    }
-  }
-  return Math.max(0, Math.min(out, len));
 }
 
 /* ---------------- guest arrival ---------------- */
@@ -307,7 +267,7 @@ function mountGuestDoc(name, text) {
   state.current = f;
   app.dataset.hasDoc = "true";
   docName.textContent = name.replace(/\.\w+$/, "");
-  editor.value = text;
+  setText(text);
   renderMarkdown(text);
   lastRendered = text;
   updateSub();

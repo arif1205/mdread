@@ -9,7 +9,7 @@ import { openShareDialog } from "./share.js";
 
 export function onKey(e) {
   const meta = e.metaKey || e.ctrlKey;
-  const inField = /input|textarea/i.test(e.target.tagName);
+  const inField = /input|textarea|select/i.test(e.target.tagName) || e.target.isContentEditable;
 
   // ⇧⌘S must be tested before ⌘S — both match once the key is lowercased.
   if (meta && e.shiftKey && e.key.toLowerCase() === "s") {

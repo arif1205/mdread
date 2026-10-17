@@ -16,7 +16,8 @@
    It is gzipped and sealed by crypto.js before it ever touches the network. */
 
 import { state } from "./state.js";
-import { $, $$, app, editor, MD_RE } from "./dom.js";
+import { $, $$, app, MD_RE } from "./dom.js";
+import { getText } from "./editor.js";
 import { readJSON } from "./util.js";
 import { newKey, exportKey, importKey, seal, open as unseal, toB64url, fromB64url } from "./crypto.js";
 import { renderTree } from "./tree.js";
@@ -158,7 +159,7 @@ export async function createRoomLink() {
     keyStr,
     seed: {
       name: f.name,
-      text: app.dataset.mode === "read" ? f.content || "" : editor.value,
+      text: app.dataset.mode === "read" ? f.content || "" : getText(),
     },
   });
 

@@ -2,7 +2,8 @@
    blank drafts whose title tracks the first H1 as you type. */
 
 import { state, positions } from "./state.js";
-import { app, docName, docSub, editor, readingScroll, MD_RE } from "./dom.js";
+import { app, docName, docSub, readingScroll, MD_RE } from "./dom.js";
+import { getText, setText, replaceText, focusEditor } from "./editor.js";
 import { ensureMd } from "./util.js";
 import { idbSet } from "./idb.js";
 import { renderMarkdown, patchMarkdown } from "./markdown.js";
@@ -11,7 +12,11 @@ import { savePos, updateProgress } from "./scroll.js";
 import { setMode } from "./view.js";
 import { toast } from "./ui.js";
 import { renderVaultBox } from "./vault.js";
-import { inRoom } from "./collab.js";
+
+/* collab.js marks the app while a room is mounted. Reading that, rather than
+   importing inRoom() from collab.js, keeps Yjs out of the startup bundle: a
+   static import would pull the whole lazy collab chunk in for every reader. */
+const inRoom = () => app.dataset.collab === "on";
 
 /* A document's text is read once and cached on the file object, so an edit made
    in another app stays invisible until we look again. Only handle-backed files
@@ -59,10 +64,7 @@ export async function syncCurrentFromDisk() {
   } finally {
     syncing = false;
   }
-  const { selectionStart: s, selectionEnd: e, scrollTop } = editor;
-  editor.value = f.content;
-  editor.setSelectionRange(Math.min(s, f.content.length), Math.min(e, f.content.length));
-  editor.scrollTop = scrollTop;
+  replaceText(f.content); // keeps the caret, scroll offset and undo history
   patchMarkdown(f.content); // repaints only changed blocks, keeps the reading position
   updateSub();
   refreshTreeState();
@@ -102,7 +104,7 @@ export async function openDoc(file) {
   docName.textContent = file.name.replace(MD_RE, "");
   updateSub();
   renderMarkdown(file.content);
-  editor.value = file.content;
+  setText(file.content);
   refreshTreeState();
   updateCurrentFolder();
   renderVaultBox(); // the "+" reflects whether *this* document is stored
@@ -144,20 +146,19 @@ export function newDoc(content = "") {
   state.current = f;
   app.dataset.hasDoc = "true";
   docName.textContent = "Untitled";
-  editor.value = content;
+  setText(content);
   renderMarkdown(content);
   updateSub();
   refreshTreeState();
   renderVaultBox();
   setMode("split");
-  editor.focus();
-  editor.setSelectionRange(content.length, content.length);
+  focusEditor({ end: true });
 }
 
 // Derive a draft's name/title from its first H1 as you type.
 export function deriveDraftTitle(f) {
   if (!f.draft) return;
-  const m = editor.value.match(/^\s{0,3}#\s+(.+?)\s*#*\s*$/m);
+  const m = getText().match(/^\s{0,3}#\s+(.+?)\s*#*\s*$/m);
   const title = (m && m[1].trim()) || "Untitled";
   const name = ensureMd(title);
   if (f.name !== name) {

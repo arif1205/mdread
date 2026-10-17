@@ -67,7 +67,7 @@ All behaviour lives in `src/modules/*.js` — plain ES modules, one concern each
 - `state.js` — the mutable `state` object, persisted `prefs`, reading `positions`
 - `idb.js` — IndexedDB key/value store · `util.js` — pure helpers
 - `markdown.js` — render pipeline · `files.js` / `tree.js` / `document.js` — sources, file tree, open/new doc
-- `editor.js` / `save.js` — editing + saving · `view.js` / `scroll.js` / `ui.js` — modes, prefs, progress, toasts
+- `editor.js` / `save.js` — editing + saving · `cm.js` — CodeMirror 6, see below · `view.js` / `scroll.js` / `ui.js` — modes, prefs, progress, toasts
 - `crypto.js` — AES-GCM, gzip, and PBKDF2 primitives, pure bytes-in/bytes-out
 - `share.js` — bundle format, the share dialog, and `bootShare()` (the shared-link viewer)
 - `vault.js` — sign-in, master-password unlock, share-list sync, and vault documents
@@ -78,7 +78,7 @@ All behaviour lives in `src/modules/*.js` — plain ES modules, one concern each
 The modules form import **cycles** (e.g. `tree` ↔ `document`, `files` ↔ `recents`). This is
 fine: imported bindings are only *called* at runtime, never used during module evaluation, so
 ES module live bindings resolve them. Listeners that used to run at script load are now wrapped
-in `wire*()` functions (`wireEditor`, `wireScroll`, `wireUi`, `wireFallbackInputs`) and called
+in `wire*()` functions (`wireScroll`, `wireUi`, `wireFallbackInputs`) and called
 from `main.js`'s `wire()`.
 
 **State-driven UI is the central pattern.** JS never toggles classes for layout; it sets `data-*`
@@ -128,6 +128,21 @@ inline menu and then disable themselves page-wide when the field vanishes — Bi
 ⚠️ `openSample()` in `sample.js` sets `state.current` directly instead of going through
 `openDoc()`, so anything that must react to "the current document changed" needs calling from
 both. `renderVaultBox()` is wired into `openDoc`, `newDoc`, and `openSample` for this reason.
+
+**The editor is CodeMirror 6, behind a facade.** Nothing outside `editor.js` touches
+CodeMirror: callers use `getText` / `setText` (load a doc, fresh undo) / `replaceText`
+(minimal diff — keeps caret, scroll, undo) / `focusEditor`. `cm.js` is **dynamically
+imported** on the first Split/Edit, so readers never load it; until then `editor.js` holds
+the text in a plain string. It edits text byte-for-byte — never swap in a WYSIWYG editor
+that round-trips through an AST, because saves write back to users' files (often under git).
+Only transactions with a CodeMirror `userEvent` count as edits (live render + dirty);
+programmatic loads and y-codemirror's remote changes are untagged. In a co-editing room
+`collab.js` binds `y-codemirror.next` to the same `Y.Text`, which also swaps CM's undo for a
+`Y.UndoManager` so ⌘Z never undoes a peer.
+
+⚠️ Keep `collab.js` reachable **only** by dynamic import. A static import anywhere (even of
+one tiny helper) pulls Yjs into the startup bundle — check `dist/index.html` has no
+`modulepreload` for `collab-*.js` or `editor-*.js` after touching imports.
 
 ### Styles (SCSS)
 

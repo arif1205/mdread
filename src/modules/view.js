@@ -3,22 +3,23 @@
    the stylesheet reacts to — JS never toggles layout classes directly. */
 
 import { state, prefs } from "./state.js";
-import { $, $$, app, editor } from "./dom.js";
+import { $, $$, app } from "./dom.js";
+import { getText, replaceText, focusEditor } from "./editor.js";
 import { renderMarkdown } from "./markdown.js";
 
 export function setMode(mode) {
   // commit edits when switching away from an editor view into read
   if (state.current && app.dataset.mode !== "read" && mode === "read") {
-    state.current.content = editor.value;
+    state.current.content = getText();
     renderMarkdown(state.current.content);
   }
   if (state.current && app.dataset.mode === "read" && mode !== "read") {
-    editor.value = state.current.content;
+    replaceText(state.current.content);
   }
-  if (mode === "split") renderMarkdown(editor.value || state.current?.content || "");
+  if (mode === "split") renderMarkdown(getText() || state.current?.content || "");
   app.dataset.mode = mode;
   $$(".seg [data-mode-val]").forEach((b) => b.classList.toggle("is-on", b.dataset.modeVal === mode));
-  if (mode !== "read") editor.focus();
+  if (mode !== "read") focusEditor();
 }
 
 export function applyPrefs() {

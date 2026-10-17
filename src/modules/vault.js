@@ -17,7 +17,8 @@
 import { deriveVaultKey, seal, open as unseal, toB64url } from "./crypto.js";
 import { readShares, writeShares, readTombstones, writeTombstones, revokeShare, copyLink } from "./share.js";
 import { debounce, readJSON } from "./util.js";
-import { $, app, editor, MD_RE } from "./dom.js";
+import { $, app, MD_RE } from "./dom.js";
+import { getText } from "./editor.js";
 import { toast } from "./ui.js";
 import { state } from "./state.js";
 import { renderTree } from "./tree.js";
@@ -637,7 +638,7 @@ async function addCurrentToVault() {
   btn.disabled = true;
   try {
     // Commit anything sitting in the editor before snapshotting.
-    if (app.dataset.mode !== "read") f.content = editor.value;
+    if (app.dataset.mode !== "read") f.content = getText();
     const entry = await saveDocToVault({ name: f.name, path: f.path, content: f.content ?? "" });
     f.vaultId = entry.id;
     toast("Saved to vault ✓");

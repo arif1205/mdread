@@ -1,11 +1,11 @@
-/* Magic-link delivery via ToSend — https://tosend.com/docs/api/send-email/
+/* Magic-link delivery via Resend — https://resend.com/docs/api-reference/emails/send-email
  *
- *   POST https://api.tosend.com/v2/emails
- *   Authorization: Bearer <TOSEND_API_KEY>
- *   { from: {name, email}, to: [{email}], subject, text, html }
- *   -> 200 { message_id } | 401 unauthorized | 403 forbidden | 422 validation_error
+ *   POST https://api.resend.com/emails
+ *   Authorization: Bearer <RESEND_API_KEY>
+ *   { from: "Name <addr>", to: [addr], subject, text, html }
+ *   -> 200 { id } | 4xx { statusCode, name, message } (an unverified domain is 403)
  *
- * Set TOSEND_API_KEY (and optionally MAIL_FROM) as secrets and mail goes out for
+ * Set RESEND_API_KEY (and optionally MAIL_FROM) as secrets and mail goes out for
  * real; leave them unset and the link is written to the Worker log instead, which
  * is how local development works.
  *
@@ -14,17 +14,17 @@
  * only way to read it without mail configured is to have log access.
  */
 
-const ENDPOINT = "https://api.tosend.com/v2/emails";
-const DEFAULT_FROM = { name: "mdread", email: "login@mdread.app" };
+const ENDPOINT = "https://api.resend.com/emails";
+// Resend's shared test sender needs no verified domain, but only delivers to the
+// Resend account owner's own address. Set MAIL_FROM on a verified domain for anyone else.
+const DEFAULT_FROM = "mdread <onboarding@resend.dev>";
 
-/* MAIL_FROM is a convenience for operators, so accept either an RFC 5322 string
-   ("mdread <login@mdread.app>") or a bare address, and hand ToSend the object
-   shape its API actually wants. */
-function parseFrom(raw) {
+/* MAIL_FROM accepts either "Name <addr>" or a bare address; a bare one gets the
+   mdread display name so the inbox doesn't show just the address. */
+function formatFrom(raw) {
   if (!raw) return DEFAULT_FROM;
-  const m = String(raw).match(/^\s*(.*?)\s*<\s*([^>]+)\s*>\s*$/);
-  if (m) return { name: m[1].replace(/^"|"$/g, "") || DEFAULT_FROM.name, email: m[2] };
-  return { name: DEFAULT_FROM.name, email: String(raw).trim() };
+  const v = String(raw).trim();
+  return v.includes("<") ? v : `mdread <${v}>`;
 }
 
 const bodyText = (link) =>
@@ -61,7 +61,7 @@ const bodyHtml = (link) => `<!doctype html>
 </div>`;
 
 export async function sendMagicLink(env, email, link) {
-  if (!env.TOSEND_API_KEY) {
+  if (!env.RESEND_API_KEY) {
     console.log(JSON.stringify({ msg: "auth.magic_link.dev", link }));
     return { delivered: false, reason: "no-mail-provider" };
   }
@@ -71,12 +71,12 @@ export async function sendMagicLink(env, email, link) {
     res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${env.TOSEND_API_KEY}`,
+        authorization: `Bearer ${env.RESEND_API_KEY}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        from: parseFrom(env.MAIL_FROM),
-        to: [{ email }],
+        from: formatFrom(env.MAIL_FROM),
+        to: [email],
         subject: "Your mdread sign-in link",
         text: bodyText(link),
         html: bodyHtml(link),
@@ -88,22 +88,22 @@ export async function sendMagicLink(env, email, link) {
   }
 
   if (!res.ok) {
-    // ToSend returns { status_code, error_type, message, errors }. Log enough to
-    // diagnose (an unverified sending domain is the usual 422) but never the
-    // recipient address or the link.
+    // Resend returns { statusCode, name, message }. Log enough to diagnose (an
+    // unverified sending domain is the usual 403) but never the recipient address
+    // or the link.
     const detail = await res.json().catch(() => ({}));
     console.error(
       JSON.stringify({
         msg: "auth.mail_failed",
         status: res.status,
-        error_type: detail.error_type,
+        error_type: detail.name,
         detail: String(detail.message || "").slice(0, 300),
       })
     );
     throw new Error("Could not send the sign-in email");
   }
 
-  const { message_id } = await res.json().catch(() => ({}));
-  console.log(JSON.stringify({ msg: "auth.mail_sent", message_id }));
-  return { delivered: true, messageId: message_id };
+  const { id } = await res.json().catch(() => ({}));
+  console.log(JSON.stringify({ msg: "auth.mail_sent", message_id: id }));
+  return { delivered: true, messageId: id };
 }

@@ -195,8 +195,9 @@ only build-time Sass values (breakpoints) that compile away. (The main-column pa
 - **Two KV namespaces**: `SHARES` (ciphertext, TTL'd) and `VAULT` (accounts, sessions, and
   vault blobs, no TTL). Create each with and without `--preview`; the ids in `wrangler.jsonc`
   are placeholders. Without them the matching routes answer `501` and the reader half still
-  works perfectly. Sign-in mail goes through [ToSend](https://tosend.com/docs/api/send-email/)
-  and needs the `TOSEND_API_KEY` / `MAIL_FROM` secrets; unset, magic
+  works perfectly. Sign-in mail goes through [Resend](https://resend.com/docs/api-reference/emails/send-email)
+  and needs the `RESEND_API_KEY` secret (`MAIL_FROM` optional; it defaults to Resend's
+  owner-only test sender); unset, magic
   links go to the Worker log. **Never return a magic link in a response** — that would be an
   authentication bypass, which is why `email.js` only ever logs it.
 - `assets.run_worker_first: ["/api/*"]` keeps every non-API request on the pure-static path, so

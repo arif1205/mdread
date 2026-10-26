@@ -12,12 +12,13 @@
   //   npm run deploy:prod  → publishes to the custom domain below   (maintainer)
   //
   // ── Secrets, for sign-in emails ──────────────────────────────────────
-  //   wrangler secret put TOSEND_API_KEY        # from tosend.com
-  //   wrangler secret put MAIL_FROM             # e.g. "mdread <login@mdread.app>"
-  // Mail goes through ToSend (https://tosend.com/docs/api/send-email/). Without
+  //   wrangler secret put RESEND_API_KEY        # from resend.com
+  //   wrangler secret put MAIL_FROM             # e.g. "mdread <login@example.com>"
+  // Mail goes through Resend (https://resend.com/docs/api-reference/emails/send-email). Without
   // these, magic links are written to the Worker log instead of sent, which is how
   // local development works. They are never put in an HTTP response.
-  // The sending domain must be verified with ToSend or the API answers 422.
+  // The sending domain must be verified with Resend or the API answers 403. Unset,
+  // MAIL_FROM falls back to Resend's test sender, which only mails the account owner.
   //
   // Account handling:
   //   - base config (`npm run deploy`): no account_id — forks deploy to THEIR

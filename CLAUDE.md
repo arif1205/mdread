@@ -118,7 +118,8 @@ drives what `saveDoc()` does — it cascades write-through-handle → `showSaveF
 highlight code → rewrite external links to `target="_blank"`.
 
 **Persistence**: IndexedDB (`markread` db, `kv` store) holds folder `handle`s — `recents`,
-`lastDoc`. `localStorage` holds `markread:prefs`, `markread:pos` (per-path scroll ratio),
+`lastDoc` — and `files`, the handles of loose files opened without a folder (empty while a
+folder is open; `restoreFiles()` reopens them on boot ahead of the most recent folder). `localStorage` holds `markread:prefs`, `markread:pos` (per-path scroll ratio),
 `markread:shares` (links you've created, *including their keys*, so they can be re-copied and
 revoked), `markread:shares:removed` (revocation tombstones, so a sync can't resurrect a deleted
 share), `markread:vault:email` (to prefill the unlock form), and `markread:vault:docs` +

@@ -8,6 +8,7 @@ import { ensureMd } from "./util.js";
 import { renderMarkdown } from "./markdown.js";
 import { renderTree, refreshTreeState } from "./tree.js";
 import { updateSub } from "./document.js";
+import { rememberFiles } from "./files.js";
 import { toast } from "./ui.js";
 
 // Record the mtime of what we just wrote, so the focus check in document.js
@@ -41,6 +42,7 @@ export async function saveDoc() {
       await w.write(f.content);
       await w.close();
       f.handle = handle;
+      rememberFiles();
       await noteWritten(f);
       f.draft = false;
       f.name = handle.name;

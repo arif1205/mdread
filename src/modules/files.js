@@ -5,7 +5,7 @@ import { state } from "./state.js";
 import { $, isMarkdown, supportsFSA } from "./dom.js";
 import { isImage, resetAssets } from "./assets.js";
 import { byPath } from "./util.js";
-import { idbGet } from "./idb.js";
+import { idbGet, idbSet } from "./idb.js";
 import { addRecent } from "./recents.js";
 import { renderTree } from "./tree.js";
 import { openDoc } from "./document.js";
@@ -82,6 +82,27 @@ export function addFiles(list, replace) {
     }
   state.files.sort(byPath);
   renderTree();
+  rememberFiles();
+}
+
+// Loose files have no folder in recents to reopen them from, so their handles are
+// kept here to survive a reload. An open folder restores itself, so it stores none.
+export function rememberFiles() {
+  const loose = state.rootHandle ? [] : state.files.filter((f) => f.handle).map(({ name, path, handle }) => ({ name, path, handle }));
+  idbSet("files", loose).catch(() => {});
+}
+
+// Reopens the loose files from the last visit. The tree comes back even without
+// permission; clicking a file then asks for it (see openDoc).
+export async function restoreFiles() {
+  const saved = await idbGet("files").catch(() => null);
+  if (!saved?.length) return false;
+  addFiles(saved, /*replace*/ true);
+  const last = await idbGet("lastDoc").catch(() => null);
+  const target = state.files.find((f) => f.path === last) || state.files[0];
+  if ((await target.handle.queryPermission()) === "granted") await openDoc(target);
+  else toast("Click a file to reopen it");
+  return true;
 }
 
 /* drag + drop */

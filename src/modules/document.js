@@ -86,6 +86,8 @@ export async function openDoc(file) {
 
   if (file.content == null) {
     try {
+      // A handle restored from IndexedDB may need its grant renewed; the tree click is the user gesture.
+      if (file.handle && (await file.handle.queryPermission()) !== "granted") await file.handle.requestPermission();
       if (file.handle) file.content = await readHandle(file);
       else if (file.file) file.content = await file.file.text();
       else file.content = "";

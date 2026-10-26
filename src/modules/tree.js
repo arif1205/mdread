@@ -6,6 +6,7 @@ import { $$, tree, curFolder, curFolderName, searchInput, app, reading, tocList,
 import { escapeHtml } from "./util.js";
 import { idbSet } from "./idb.js";
 import { openDoc } from "./document.js";
+import { rememberFiles } from "./files.js";
 import { setText } from "./editor.js";
 import { openSearch } from "./search.js";
 import { renderBacklinks } from "./links.js";
@@ -39,6 +40,7 @@ export function closeLibrary() {
   state.filter = "";
   searchInput.value = "";
   idbSet("lastDoc", "").catch(() => {});
+  rememberFiles();
   app.dataset.hasDoc = "false";
   reading.innerHTML = "";
   setText("");

@@ -12,7 +12,7 @@ import { debounce } from "./modules/util.js";
 import { idbDel } from "./modules/idb.js";
 
 import { newDoc, wireDiskSync } from "./modules/document.js";
-import { openFolder, openFiles, handleDrop, setRoot, wireFallbackInputs } from "./modules/files.js";
+import { openFolder, openFiles, handleDrop, setRoot, restoreFiles, wireFallbackInputs } from "./modules/files.js";
 import { openSample } from "./modules/sample.js";
 import { setSidebar, toggleFocus, setMode, applyPrefs, wirePrint } from "./modules/view.js";
 import { closeLibrary, renderTree } from "./modules/tree.js";
@@ -182,18 +182,19 @@ async function init() {
     );
   }
 
-  // restore recent folders; auto-open the most recent if still permitted
+  // restore recent folders; auto-open the most recent if still permitted. Stored
+  // loose files mean they were opened after any folder, so they win.
   try {
     await idbDel("root").catch(() => {}); // drop the deprecated key so a removed folder can't resurrect
     const recents = await getRecents();
     await renderRecents();
     const h = recents[0]?.handle;
-    if (h && (await h.queryPermission({ mode: "readwrite" })) === "granted") {
+    if (!(await restoreFiles()) && h && (await h.queryPermission({ mode: "readwrite" })) === "granted") {
       await setRoot(h);
     }
   } catch {}
 
-  // OS file-handler, wired last on purpose. setRoot() above calls addFiles with
+  // OS file-handler, wired last on purpose. setRoot()/restoreFiles() above call addFiles with
   // replace=true and then opens lastDoc, so a launch consumed any earlier gets
   // wiped from the tree and scrolled past. Claiming the queue after the restore
   // means the launched file appends to the library and wins the final openDoc.

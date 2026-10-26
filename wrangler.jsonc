@@ -60,15 +60,15 @@
   "kv_namespaces": [
     {
       "binding": "SHARES",
-      "id": "769bbbd3b75a4f369bd798d8d3f4c66e",
-      "preview_id": "941b58a3f5424169ac5feffad5a517d8"
+      "id": "9a8fc1023ae341a4b6f8768a26f4a115",
+      "preview_id": "1c84001088cf4ac789bea890d8dd6fbd"
     },
     {
       // Accounts and the synced share-link vault. Separate from SHARES because
       // shares expire and vaults don't, and so a fork can run one without the other.
       "binding": "VAULT",
-      "id": "10f2860e82ba4f69a10a499ba1ee7820",
-      "preview_id": "faba139347d145f7b9f5320a2bf0af5f"
+      "id": "5c8b66a346a94a2f952c17ccea276a93",
+      "preview_id": "09eb88ab76b549b68f36354ac4b0af83"
     }
   ],
   // Inheritable, unlike the binding above — declared once for every environment.

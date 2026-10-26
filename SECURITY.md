@@ -47,7 +47,7 @@ is the only supported version. Fixes land there.
 Please report security issues **privately** — do not open a public issue for
 anything exploitable.
 
-- Preferred: open a [GitHub security advisory](https://github.com/techjewel/mdread/security/advisories/new).
+- Preferred: open a [GitHub security advisory](https://github.com/arif1205/mdread/security/advisories/new).
 - Or email **cep.jewel@gmail.com** with steps to reproduce.
 
 Please include what you did, what happened, and the browser/OS. We'll acknowledge

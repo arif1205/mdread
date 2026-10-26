@@ -8,7 +8,7 @@ Deploys to Cloudflare in one command.
 
 🔗 **Live: [mdread.app](https://mdread.app)** · MIT licensed · no accounts · no tracking
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/techjewel/mdread)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/arif1205/mdread)
 
 ![mdread](public/og-image.png)
 
@@ -89,7 +89,7 @@ npm run dev:worker   # vite build && wrangler dev → http://localhost:8787
 
 ### One-click (no CLI)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/techjewel/mdread)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/arif1205/mdread)
 
 Cloudflare clones this repo into your own GitHub, runs `npm run build`, and deploys
 to a free `*.workers.dev` URL on your account. Every push to your copy then
@@ -126,16 +126,18 @@ and vaults don't, and so you can run one feature without the other.
 created by the migration on your first deploy, so a fork gets live collaboration with no
 extra setup — provided Durable Objects are enabled on your Cloudflare plan.
 
-**Sign-in emails go through [ToSend](https://tosend.com/docs/api/send-email/).** Set these
+**Sign-in emails go through [Resend](https://resend.com/docs/api-reference/emails/send-email).** Set these
 as secrets:
 
 ```bash
-npx wrangler secret put TOSEND_API_KEY     # from tosend.com
-npx wrangler secret put MAIL_FROM          # e.g. "mdread <login@mdread.app>"
+npx wrangler secret put RESEND_API_KEY     # from resend.com
+npx wrangler secret put MAIL_FROM          # e.g. "mdread <login@example.com>"
 ```
 
-The sending domain has to be verified with ToSend first, or the API answers `422`.
-`MAIL_FROM` accepts either `Name <addr@example.com>` or a bare address.
+The sending domain has to be verified with Resend first, or the API answers `403`.
+`MAIL_FROM` accepts either `Name <addr@example.com>` or a bare address. Leave it unset to
+use Resend's test sender (`onboarding@resend.dev`), which only delivers to the address that
+owns the Resend account — enough for a personal instance.
 
 Without these, magic links are written to the Worker log instead of sent — which is
 exactly how local development works. **They are never returned in an HTTP response**,
@@ -201,7 +203,7 @@ worker/
   room.js             one Durable Object per co-editing room; relays sealed updates
   auth.js             magic links and sessions; stores SHA-256(email), never the address
   vault.js            one opaque blob per account
-  email.js            mail adapter — ToSend, or the log in development
+  email.js            mail adapter — Resend, or the log in development
   lib.js              shared helpers (ids, hashing, bounded reads, cookies)
 vite.config.js        build + PWA service-worker config
 wrangler.jsonc        Cloudflare Workers config (serves ./dist, runs the API)

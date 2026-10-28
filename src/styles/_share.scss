@@ -468,6 +468,7 @@ html[data-theme="night"] .btn--danger:hover { color: #1a1610; }
 .app[data-shared="on"] .seg,
 .app[data-shared="on"] .sources,
 .app[data-shared="on"] .curfolder,
+.app[data-shared="on"] .file__rm,
 .app[data-shared="on"] .recents { display: none; }
 
 /* no document open yet — nothing to share */

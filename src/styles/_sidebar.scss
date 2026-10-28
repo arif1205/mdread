@@ -95,6 +95,17 @@ html[data-theme="night"] .file.is-active { color: #1a1610; }
 .file.is-active .dot { color: currentColor; }
 .file.is-dirty .dot { opacity: 1; }
 .file__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file__rm {
+  flex: none; align-self: center; width: 1.15rem; height: 1.15rem; border-radius: 5px;
+  display: grid; place-items: center; font-size: 1rem; line-height: 1;
+  color: var(--ink-faint); opacity: 0; transition: .14s var(--ease);
+}
+.file:hover .file__rm, .file:focus-visible .file__rm { opacity: .65; }
+.file__rm:hover { opacity: 1; color: var(--accent); background: var(--paper); }
+.file.is-active .file__rm { color: currentColor; }
+.file.is-active .file__rm:hover { background: rgb(0 0 0 / .15); }
+// no hover on touch screens, so keep it visible there
+@media (hover: none) { .file__rm { opacity: .65; } }
 
 .sidebar__foot {
   border-top: 1px solid var(--line);

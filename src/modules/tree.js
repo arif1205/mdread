@@ -53,6 +53,20 @@ export function closeLibrary() {
   renderBacklinks();
 }
 
+// Takes a file off the list only; nothing on disk changes.
+export async function removeFile(f) {
+  if (state.files.length === 1) return closeLibrary(); // also asks about unsaved edits
+  if (f.dirty && !confirm(`Discard unsaved changes to “${f.name}”?`)) return;
+  const i = state.files.indexOf(f);
+  state.files.splice(i, 1);
+  rememberFiles();
+  renderTree();
+  if (f === state.current) {
+    state.current = null;
+    await openDoc(state.files[Math.min(i, state.files.length - 1)]);
+  }
+}
+
 export function renderTree() {
   updateCurrentFolder();
   tree.innerHTML = "";
@@ -103,6 +117,21 @@ function renderNode(node, isRoot, expand) {
     if (f.dirty) btn.classList.add("is-dirty");
     btn.dataset.path = f.path;
     btn.innerHTML = `<span class="dot">●</span><span class="file__name">${escapeHtml(f.name.replace(MD_RE, ""))}</span>`;
+    // A folder's tree mirrors the folder and re-walks on reload, so only loose files can be dropped.
+    if (!state.rootName) {
+      const rm = document.createElement("span");
+      rm.className = "file__rm";
+      rm.role = "button";
+      rm.title = "Remove from list";
+      // setAttribute, not markup: escapeHtml leaves quotes alone, and shared names come from other people
+      rm.setAttribute("aria-label", `Remove ${f.name.replace(MD_RE, "")} from the list`);
+      rm.textContent = "×";
+      rm.addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeFile(f);
+      });
+      btn.appendChild(rm);
+    }
     btn.addEventListener("click", () => {
       openDoc(f);
       if (innerWidth <= 820) setSidebar(false);
